@@ -282,6 +282,8 @@ public class KThread {
 	if (status == statusFinished) {
 		return;
 	}
+	
+	sleep();
 
     }
 
