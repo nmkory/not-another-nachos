@@ -289,7 +289,7 @@ public class KThread {
 		sleep();
 	}
 
-    }//comment
+    }
 
     /**
      * Create the idle thread. Whenever there are no threads ready to be run,
