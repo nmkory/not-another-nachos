@@ -448,6 +448,8 @@ public class KThread {
     /** Number of times the KThread constructor was called. */
     private static int numCreated = 0;
 
+    //to make join work, we need to implement a waitQueue
+    private static ThreadQueue waitQueue = null;
     private static ThreadQueue readyQueue = null;
     private static KThread currentThread = null;
     private static KThread toBeDestroyed = null;
