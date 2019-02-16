@@ -283,7 +283,11 @@ public class KThread {
 		return;
 	}
 	
-	sleep();
+	//else it needs to join the sleep and wait to be added to the readyQueue
+	else {
+		waitQueue.waitForAccess(this);
+		sleep();
+	}
 
     }
 
