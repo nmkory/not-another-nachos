@@ -193,10 +193,11 @@ public class KThread {
 	Lib.assertTrue(toBeDestroyed == null);
 	toBeDestroyed = currentThread;
 
-
 	currentThread.status = statusFinished;
 	
-	
+	KThread nextThread = waitQueue.nextThread();
+	if (nextThread != null)
+	    nextThread.ready();
 	
 	sleep();
     }
