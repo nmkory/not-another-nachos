@@ -48,6 +48,8 @@ public class KThread {
 	}	    
 	else {
 	    readyQueue = ThreadedKernel.scheduler.newThreadQueue(false);
+	    //Task I: set new waitQueue (?)
+	    waitQueue = ThreadedKernel.scheduler.newThreadQueue(false);
 	    readyQueue.acquire(this);	    
 
 	    currentThread = this;
@@ -194,6 +196,8 @@ public class KThread {
 
 	currentThread.status = statusFinished;
 	
+	
+	
 	sleep();
     }
 
@@ -267,7 +271,7 @@ public class KThread {
     }
 
     /**
-     * Waits for this thread to finish. If this thread is already finished,
+     * Task I: Waits for this thread to finish. If this thread is already finished,
      * return immediately. This method must only be called once; the second
      * call is not guaranteed to return. This thread must not be the current
      * thread.
@@ -278,6 +282,9 @@ public class KThread {
 	//This thread must not be the current thread.
 	Lib.assertTrue(this != currentThread);
 	
+	//Like yield, we disable interrupts and store them into intStatus (in case already disabled)
+	boolean intStatus = Machine.interrupt().disable();
+	
 	//If this thread is already finished, return immediately.
 	if (status == statusFinished) {
 		return;
@@ -285,11 +292,14 @@ public class KThread {
 	
 	//else it needs to join the sleep and wait to be added to the readyQueue
 	else {
-		waitQueue.waitForAccess(this);
-		sleep();
+		waitQueue.acquire(currentThread);
+		currentThread.sleep();
 	}
+	
+	//restore interrupts using intStatus
+	Machine.interrupt().restore(intStatus);
 
-    }
+    } //join()
 
     /**
      * Create the idle thread. Whenever there are no threads ready to be run,
@@ -452,7 +462,7 @@ public class KThread {
     /** Number of times the KThread constructor was called. */
     private static int numCreated = 0;
 
-    //to make join work, we need to implement a waitQueue
+    //Task I: to make join work, we need to implement a waitQueue
     private static ThreadQueue waitQueue = null;
     private static ThreadQueue readyQueue = null;
     private static KThread currentThread = null;
