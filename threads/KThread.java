@@ -47,9 +47,8 @@ public class KThread {
 	    tcb = new TCB();
 	}	    
 	else {
+		waitQueue = ThreadedKernel.scheduler.newThreadQueue(true);
 	    readyQueue = ThreadedKernel.scheduler.newThreadQueue(false);
-	    //Task I: set new waitQueue (?)
-	    waitQueue = ThreadedKernel.scheduler.newThreadQueue(false);
 	    readyQueue.acquire(this);	    
 
 	    currentThread = this;
@@ -195,10 +194,15 @@ public class KThread {
 
 	currentThread.status = statusFinished;
 	
-	KThread nextThread = waitQueue.nextThread();
-	if (nextThread != null)
-	    nextThread.ready();
+	//may be null if there are no threads in the waitQueue
+	KThread lockHolder = waitQueue.nextThread();
 	
+	//while not null, ready every waitQueue thread
+	while (lockHolder != null) {
+		lockHolder.ready();
+		lockHolder = waitQueue.nextThread();
+	} //all threads are now awake
+	    
 	sleep();
     }
 
@@ -288,12 +292,14 @@ public class KThread {
 	
 	//If this thread is already finished, return immediately.
 	if (status == statusFinished) {
+		//restore interrupts using intStatus
+		Machine.interrupt().restore(intStatus);
 		return;
 	}
 	
 	//else it needs to join the sleep and wait to be added to the readyQueue
 	else {
-		waitQueue.acquire(currentThread);
+		waitQueue.waitForAccess(currentThread);
 		currentThread.sleep();
 	}
 	
