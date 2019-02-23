@@ -27,6 +27,25 @@ public class Communicator {
      * @param	word	the integer to transfer.
      */
     public void speak(int word) {
+    	speakLock.acquire();
+    	
+    	KThread listener = listenQueue.nextThread();
+    	
+    	while (listener == null) {
+    		yield();
+    		listener = listenQueue.nextThread();
+    	}
+    	
+    	this.word = word;
+    	
+    	listener.ready();
+    	
+    	while (!heard)
+    		yield();
+    	
+    	heard = false;
+    	
+    	speakLock.release();
     }
 
     /**
@@ -36,6 +55,22 @@ public class Communicator {
      * @return	the integer transferred.
      */    
     public int listen() {
-	return 0;
+    int word = 1;
+    
+    KThread listener = currentThread();
+    
+    listenQueue.waitForAccess(listener);
+    sleep();
+    
+    heard = true;
+	return word;
     }
+    
+    private static boolean heard = false;
+    private static int word;
+    private static Lock Lock;
+    private ThreadQueue listenQueue =
+    		ThreadedKernel.scheduler.newThreadQueue(false);
+    private ThreadQueue speakerQueue =
+    		ThreadedKernel.scheduler.newThreadQueue(false);
 }
