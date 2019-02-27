@@ -29,21 +29,21 @@ public class Communicator {
     public void speak(int word) {
     	lock.acquire();
     	
-    	KThread listener = listenQueue.nextThread();
+    	KThread listener = listenerQueue.nextThread();
     	
     	while (listener == null) {
     		KThread.yield();
-    		listener = listenQueue.nextThread();
+    		listener = listenerQueue.nextThread();
     	}
     	
     	this.word = word;
     	
     	listener.ready();
     	
-    	while (!heard)
+    	while (!wordToBeHeard)
     		KThread.yield();
     	
-    	heard = false;
+    	wordToBeHeard = false;
     	
     	lock.release();
     }
@@ -55,21 +55,36 @@ public class Communicator {
      * @return	the integer transferred.
      */    
     public int listen() {
-    int word = 1;
+    int heardWord;
     
-    KThread listener = KThread.currentThread();
+    lock.acquire();
     
-    listenQueue.waitForAccess(listener);
-    KThread.sleep();
-    
-    heard = true;
-	return word;
+    if (wordToBeHeard) {
+    	heardWord = word;
+    	wordToBeHeard = false;
+    	lock.release();
+    	return heardWord;
     }
     
-    private static boolean heard = false;
-    private static int word;
-    private static Lock lock;
-    private ThreadQueue listenQueue =
+    else {  
+	    while (!wordToBeHeard) {
+	    listenerQueue.waitForAccess(KThread.currentThread());
+	    KThread.sleep();
+	    }
+	
+	    heardWord = word;
+		wordToBeHeard = false;
+		lock.release();
+		return heardWord;
+    }
+    }  //listen()
+    
+    
+    
+    private boolean wordToBeHeard = false;  //remove static?, variable should belong to object not to class
+    private int word;  //remove static?, variable should belong to object not to class
+    private Lock lock;  //remove static?, variable should belong to object not to class
+    private ThreadQueue listenerQueue =
     		ThreadedKernel.scheduler.newThreadQueue(false);
     private ThreadQueue speakerQueue =
     		ThreadedKernel.scheduler.newThreadQueue(false);
