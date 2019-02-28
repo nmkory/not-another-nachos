@@ -27,27 +27,21 @@ public class Communicator {
      * @param	word	the integer to transfer.
      */
     public void speak(int word) {
-    	lock.acquire();
-    	
-    	KThread listener = listenQueue.nextThread();
-    	
-    	while (listener == null) {
-    		KThread.yield();
-    		listener = listenQueue.nextThread();
-    	}
-    	
-    	this.word = word;
-    	
-    	listener.ready();
-    	
-    	while (!heard)
-    		KThread.yield();
-    	
-    	heard = false;
-    	
-    	lock.release();
-    }
-
+    	boolean intStatus = Machine.interrupt().disable();
+	    lock.acquire();
+	    
+	    while (wordToBeHeard) {
+	    	listener.wake();
+	    	speaker.sleep();
+	    }
+	    
+	   this.word = word;
+	   wordToBeHeard = true;
+	   listener.wake();
+	   lock.release();
+	   Machine.interrupt().restore(intStatus);
+    }  //speak()
+    
     /**
      * Wait for a thread to speak through this communicator, and then return
      * the <i>word</i> that thread passed to <tt>speak()</tt>.
@@ -55,22 +49,76 @@ public class Communicator {
      * @return	the integer transferred.
      */    
     public int listen() {
-    int word = 1;
+	    boolean intStatus = Machine.interrupt().disable();
+	    lock.acquire();
+	    
+	    while (!wordToBeHeard) {
+	    	speaker.wake();
+	    	listener.sleep();	
+	    }
+	    
+	   int wordToHear = word;
+	   wordToBeHeard = false;
+	   speaker.wake();
+	   lock.release();
+	   Machine.interrupt().restore(intStatus);
+	   return wordToHear; 	
+   }  //listen()   	
     
-    KThread listener = KThread.currentThread();
     
-    listenQueue.waitForAccess(listener);
-    KThread.sleep();
     
-    heard = true;
-	return word;
-    }
+/*    private static class speakerRun implements Runnable {
+    	speakerRun(Communicator myCom) {
+    	    this.myCom = myCom;
+    	}
+    	
+    	public void run() {
+    	   myCom.speak(2);    	    
+    	}
+
+    	private Communicator myCom;
+        }  //speakerRun()
     
-    private static boolean heard = false;
-    private static int word;
-    private static Lock lock;
-    private ThreadQueue listenQueue =
-    		ThreadedKernel.scheduler.newThreadQueue(false);
-    private ThreadQueue speakerQueue =
-    		ThreadedKernel.scheduler.newThreadQueue(false);
+    private static class listenRun implements Runnable {
+    	listenRun(Communicator myCom) {
+    	    this.myCom = myCom;
+    	    Lib.debug(dbgThread,
+      			  	"Creating listen thread");
+    	}
+    	
+    	public void run() {
+    		Lib.debug(dbgThread,
+      			  	"Thread " + KThread.currentThread().getName() + "is about to listen");
+    		Lib.debug(dbgThread,
+      			  	"Thread " + KThread.currentThread().getName() + "got value " + myCom.listen());    	    
+    	}
+
+    	private Communicator myCom;
+        }  //listenerRun()
+
+        
+        public static void selfTest1() {
+    	Communicator testCom = new Communicator();
+
+    	KThread listener1 = new KThread(new listenRun(testCom));
+    	listener1.setName("listener1");
+    	listener1.fork();
+    	
+    	KThread speaker1 = new KThread(new speakerRun(testCom));
+    	speaker1.setName("speaker1");
+    	speaker1.fork();
+    	
+    	
+        }  //selfTest1()
+
+    private static final char dbgThread = 't';
+*/
+    
+    private boolean wordToBeHeard = false;
+    private int word;
+    private Lock lock = new Lock();
+    private Condition listener =
+    		new Condition (lock);
+    private Condition speaker =
+    		new Condition (lock);
 }
