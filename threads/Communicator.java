@@ -56,11 +56,14 @@ public class Communicator {
      * @return	the integer transferred.
      */    
     public int listen() {
+    KThread nextSpeaker;
     boolean intStatus = Machine.interrupt().disable();
     
     lock.acquire();
     
     while (!wordToBeHeard) {
+    	if ((nextSpeaker = speakerQueue.nextThread()) != null)
+    		nextSpeaker.ready();
 	    lock.release();
 	    listenerQueue.waitForAccess(KThread.currentThread());
 	    KThread.sleep();
@@ -68,12 +71,13 @@ public class Communicator {
 	    }
     
     wordToBeHeard = false;
+    
 	lock.release();
 	Machine.interrupt().restore(intStatus);
 	return word;
     }  //listen()
     
-    private static class speakerRun implements Runnable {
+/*    private static class speakerRun implements Runnable {
     	speakerRun(Communicator myCom) {
     	    this.myCom = myCom;
     	}
@@ -102,9 +106,7 @@ public class Communicator {
     	private Communicator myCom;
         }  //listenerRun()
 
-        /**
-         * Test if this module is working.
-         */
+        
         public static void selfTest1() {
     	Communicator testCom = new Communicator();
 
@@ -118,7 +120,7 @@ public class Communicator {
     	
     	
         }  //selfTest1()
-    
+*/
     private static final char dbgThread = 't';
         
     private boolean wordToBeHeard = false;  //remove static?, variable should belong to object not to class
