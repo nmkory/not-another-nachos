@@ -78,7 +78,7 @@ public class ComSelfTester {
 	
 	public static void selfTest5() {
 		
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < 100; i++) {
 			new KThread(speakerRun).setName("Speaker " + Integer.toString(i)).fork();
 			new KThread(listenRun).setName("Listen " + Integer.toString(i)).fork();
 		}
@@ -98,8 +98,8 @@ public class ComSelfTester {
 	static void speakFunction() {
 		Lib.debug(dbgThread,
 				"Thread " + KThread.currentThread().getName() + " is about to speak");
-		myComms.speak(myWordCount);
-		myWordCount++;
+		myComms.speak(myWordCount++);
+		//myWordCount++;
 		Lib.debug(dbgThread,
 				"Thread " + KThread.currentThread().getName() + " has spoken");  
 	}
