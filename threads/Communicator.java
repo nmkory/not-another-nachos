@@ -27,28 +27,21 @@ public class Communicator {
      * @param	word	the integer to transfer.
      */
     public void speak(int word) {
-    	KThread nextListener;
     	boolean intStatus = Machine.interrupt().disable();
-    	
-    	lock.acquire();
-    	
-    	while (wordToBeHeard) {
-    	    lock.release();
-    	    speakerQueue.waitForAccess(KThread.currentThread());
-    	    KThread.sleep();
-    	    lock.acquire();
-    	    }
-        
-        wordToBeHeard = true;
-        this.word = word;
-        
-        if ((nextListener = listenerQueue.nextThread()) != null)
-        	nextListener.ready();
-        
-    	lock.release();
-    	Machine.interrupt().restore(intStatus);
-    }
-
+	    lock.acquire();
+	    
+	    while (wordToBeHeard) {
+	    	listener.wake();
+	    	speaker.sleep();
+	    }
+	    
+	   this.word = word;
+	   wordToBeHeard = true;
+	   listener.wake();
+	   lock.release();
+	   Machine.interrupt().restore(intStatus);
+    }  //speak()
+    
     /**
      * Wait for a thread to speak through this communicator, and then return
      * the <i>word</i> that thread passed to <tt>speak()</tt>.
@@ -56,26 +49,23 @@ public class Communicator {
      * @return	the integer transferred.
      */    
     public int listen() {
-    KThread nextSpeaker;
-    boolean intStatus = Machine.interrupt().disable();
-    
-    lock.acquire();
-    
-    while (!wordToBeHeard) {
-    	if ((nextSpeaker = speakerQueue.nextThread()) != null)
-    		nextSpeaker.ready();
-	    lock.release();
-	    listenerQueue.waitForAccess(KThread.currentThread());
-	    KThread.sleep();
+	    boolean intStatus = Machine.interrupt().disable();
 	    lock.acquire();
+	    
+	    while (!wordToBeHeard) {
+	    	speaker.wake();
+	    	listener.sleep();	
 	    }
+	    
+	   int wordToHear = word;
+	   wordToBeHeard = false;
+	   speaker.wake();
+	   lock.release();
+	   Machine.interrupt().restore(intStatus);
+	   return wordToHear; 	
+   }  //listen()   	
     
-    wordToBeHeard = false;
     
-	lock.release();
-	Machine.interrupt().restore(intStatus);
-	return word;
-    }  //listen()
     
 /*    private static class speakerRun implements Runnable {
     	speakerRun(Communicator myCom) {
@@ -120,14 +110,15 @@ public class Communicator {
     	
     	
         }  //selfTest1()
-*/
+
     private static final char dbgThread = 't';
-        
-    private boolean wordToBeHeard = false;  //remove static?, variable should belong to object not to class
-    private int word;  //remove static?, variable should belong to object not to class
-    private Lock lock = new Lock();  //remove static?, variable should belong to object not to class
-    private ThreadQueue listenerQueue =
-    		ThreadedKernel.scheduler.newThreadQueue(false);
-    private ThreadQueue speakerQueue =
-    		ThreadedKernel.scheduler.newThreadQueue(false);
+*/
+    
+    private boolean wordToBeHeard = false;
+    private int word;
+    private Lock lock = new Lock();
+    private Condition listener =
+    		new Condition (lock);
+    private Condition speaker =
+    		new Condition (lock);
 }
