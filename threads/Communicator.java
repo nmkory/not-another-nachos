@@ -38,6 +38,7 @@ public class Communicator {
 	   this.word = word;
 	   wordToBeHeard = true;
 	   listener.wake();
+	   speaker.sleep();
 	   lock.release();
 	   Machine.interrupt().restore(intStatus);
     }  //speak()
