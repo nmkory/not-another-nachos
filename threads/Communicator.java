@@ -29,6 +29,7 @@ public class Communicator {
 	 * @param	word	the integer to transfer.
 	 */
 	public void speak(int word) {
+		
 		boolean intStatus = Machine.interrupt().disable();
 		lock.acquire();
 
