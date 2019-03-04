@@ -51,11 +51,11 @@ public class ThreadedKernel extends Kernel {
 	//Semaphore.selfTest();
 	//SynchList.selfTest();
     	
-    //ComSelfTester.selfTest1();
-    //ComSelfTester.selfTest2();
-    //ComSelfTester.selfTest3();
-    //ComSelfTester.selfTest4();
-    ComSelfTester.selfTest5();
+    //CommSelfTester.selfTest1();
+    //CommSelfTester.selfTest2();
+    //CommSelfTester.selfTest3();
+    //CommSelfTester.selfTest4();
+    CommSelfTester.selfTest5();
     	
     for (int i = 0; i < 30; i++) {
     	if (KThread.currentThread().getName() == "main")
