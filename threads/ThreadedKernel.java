@@ -51,7 +51,7 @@ public class ThreadedKernel extends Kernel {
     
     
     /** Uncomment tests to see if things work. */
-	//KThread.selfTest();
+	KThreadJoinSelfTester.selfTest1();
 	//Semaphore.selfTest();
 	//SynchList.selfTest();
     
