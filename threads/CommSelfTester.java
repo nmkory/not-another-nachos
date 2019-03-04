@@ -101,7 +101,14 @@ public class CommSelfTester {
 
 	}  //selfTest5()
 
-
+	/**
+	 * Function to run inside Runnable object listenRun. Uses the
+	 * function listen on static object myComm inside this class, allowing
+	 * the threads inside the respective selfTests above to call the runnable
+	 * variables below and test functionality for listen. Needs to run with
+	 * debug flags enabled. See NACHOS README for info on how to run in debug
+	 * mode.
+	 */
 	static void listenFunction()
 	{
 		Lib.debug(dbgThread, "Thread " + KThread.currentThread().getName() 
@@ -112,6 +119,14 @@ public class CommSelfTester {
 		
 	}  //listenFunction()
 
+	/**
+	 * Function to run inside Runnable object speakerRun. Uses the
+	 * function listen on static object myComm inside this class, allowing
+	 * the threads inside the respective selfTests above to call the runnable
+	 * variables below and test functionality for speak. Needs to run with
+	 * debug flags enabled. See NACHOS README for info on how to run in debug
+	 * mode.
+	 */
 	static void speakFunction() {
 		Lib.debug(dbgThread, "Thread " + KThread.currentThread().getName() 
 				  + " is about to speak");
@@ -123,20 +138,31 @@ public class CommSelfTester {
 	}  //speakFunction()
 
 
+	/**
+	 * Wraps listenFunction inside a Runnable object so threads can be
+	 * generated for testing.
+	 */
 	private static Runnable listenRun = new Runnable() {
 		public void run() {
 			listenFunction();
 		}
 	};
 
+	/**
+	 * Wraps speakFunction inside a Runnable object so threads can be
+	 * generated for testing.
+	 */
 	private static Runnable speakerRun = new Runnable() {
 		public void run() {
 			speakFunction();
 		}
 	};
 
+	//dbgThread = 't' variable needed for debug output
 	private static final char dbgThread = 't';
+	//myComm is a shared object that tests Communicator functionality
 	private static Communicator myComm = new Communicator();
+	//myWordCount is used for selfTest5 when spawning listening/speaking threads
 	private static int myWordCount = 0;
 
 }  //CommSelfTester class
