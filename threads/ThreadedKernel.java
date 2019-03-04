@@ -46,22 +46,30 @@ public class ThreadedKernel extends Kernel {
      * tests here.
      */	
     public void selfTest() {
-    //Communicator.selfTest1();
+    //variable main stores main os KThread in local context for atom comparison
+    KThread main = KThread.currentThread();
+    
+    
+    /** Uncomment tests to see if things work. */
 	//KThread.selfTest();
 	//Semaphore.selfTest();
 	//SynchList.selfTest();
-    	
+    
     //CommSelfTester.selfTest1();
     //CommSelfTester.selfTest2();
     //CommSelfTester.selfTest3();
     //CommSelfTester.selfTest4();
     //CommSelfTester.selfTest5();
     
-    //for loop to keep main alive when testing
+    //for loop to keep main thread alive when testing
     for (int i = 0; i < 30; i++) {
-    	if (KThread.currentThread().getName() == "main")
+    	if (KThread.currentThread().compareTo(main) == 0) {
+    		//debug statement to see when main yields
+    		Lib.debug(dbgThread, "main thread yielding"); 
     		KThread.yield();
-    }
+    	}  //else this is not main thread so do not yield
+    }  //for loop has yielded 30 times and os will move on to finish
+    
 	if (Machine.bank() != null) {
 	    ElevatorBank.selfTest();
 	}
@@ -80,6 +88,9 @@ public class ThreadedKernel extends Kernel {
     public void terminate() {
 	Machine.halt();
     }
+    
+    //debug thread for this class for testing
+    private static final char dbgThread = 't';
 
     /** Globally accessible reference to the scheduler. */
     public static Scheduler scheduler = null;
