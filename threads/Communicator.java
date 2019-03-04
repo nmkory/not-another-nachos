@@ -29,21 +29,34 @@ public class Communicator {
 	 * @param	word	the integer to transfer.
 	 */
 	public void speak(int word) {
-		
-		boolean intStatus = Machine.interrupt().disable();
-		lock.acquire();
-
-		while (wordToBeHeard) {
-			listener.wake();
-			speaker.sleep();
-		}
-
-		this.word = word;
-		wordToBeHeard = true;
+	//disable and stores interrupts to acquire lock
+	boolean intStatus = Machine.interrupt().disable();
+	lock.acquire();
+	
+	//while there is a word in the buffer
+	while (wordToBeHeard) {
+		//wake a potential listener on the listener cond variable
 		listener.wake();
+		
+		//sleep on the spker cond variable, will release lock & require @ wake
 		speaker.sleep();
-		lock.release();
-		Machine.interrupt().restore(intStatus);
+	}  //leaves while loop when a word may be moved into the buffer
+	
+	//moves the parameter into the static variable for this obj
+	this.word = word;
+	
+	//notes that the buffer is full
+	wordToBeHeard = true;
+	
+	//wakes a potential listen partner
+	listener.wake();
+	
+	//sleeps, can't return until thread is paired up with a listening thread
+	speaker.sleep();
+	
+	//releases the lock and restores interrupts
+	lock.release();
+	Machine.interrupt().restore(intStatus);
 	}  //speak()
 
 	/**
@@ -53,76 +66,46 @@ public class Communicator {
 	 * @return	the integer transferred.
 	 */    
 	public int listen() {
-		boolean intStatus = Machine.interrupt().disable();
-		lock.acquire();
-
-		while (!wordToBeHeard) {
-			speaker.wake();
-			listener.sleep();	
-		}
-
-		int wordToHear = word;
-		wordToBeHeard = false;
+	//disable and stores interrupts to acquire lock
+	boolean intStatus = Machine.interrupt().disable();
+	lock.acquire();
+	
+	//while there is no word in the buffer
+	while (!wordToBeHeard) {
+		//wake any potential speakers
 		speaker.wake();
-		lock.release();
-		Machine.interrupt().restore(intStatus);
-		return wordToHear; 	
+		
+		//sleep and release the lock
+		listener.sleep();	
+	}  //leaves while loop when a word is in the buffer
+	
+	//store the buffer word in local context
+	int wordToHear = word;
+	
+	//reset buffer to receive a new word
+	wordToBeHeard = false;
+	
+	//wake a partner sleeper that is waiting on a listener
+	speaker.wake();
+	
+	//releases the lock and restores interrupts
+	lock.release();
+	Machine.interrupt().restore(intStatus);
+	return wordToHear; 	
 	}  //listen()   	
 
-
-
-	/*    private static class speakerRun implements Runnable {
-    	speakerRun(Communicator myCom) {
-    	    this.myCom = myCom;
-    	}
-
-    	public void run() {
-    	   myCom.speak(2);    	    
-    	}
-
-    	private Communicator myCom;
-        }  //speakerRun()
-
-    private static class listenRun implements Runnable {
-    	listenRun(Communicator myCom) {
-    	    this.myCom = myCom;
-    	    Lib.debug(dbgThread,
-      			  	"Creating listen thread");
-    	}
-
-    	public void run() {
-    		Lib.debug(dbgThread,
-      			  	"Thread " + KThread.currentThread().getName() + "is about to listen");
-    		Lib.debug(dbgThread,
-      			  	"Thread " + KThread.currentThread().getName() + "got value " + myCom.listen());    	    
-    	}
-
-    	private Communicator myCom;
-        }  //listenerRun()
-
-
-        public static void selfTest1() {
-    	Communicator testCom = new Communicator();
-
-    	KThread listener1 = new KThread(new listenRun(testCom));
-    	listener1.setName("listener1");
-    	listener1.fork();
-
-    	KThread speaker1 = new KThread(new speakerRun(testCom));
-    	speaker1.setName("speaker1");
-    	speaker1.fork();
-
-
-        }  //selfTest1()
-
-    private static final char dbgThread = 't';
-	 */
-
+	//variable to indicate if buffer is full
 	private boolean wordToBeHeard = false;
+	
+	//buffer to pass word
 	private int word;
+	
+	//lock for condition variables and to maintain atomicity
 	private Lock lock = new Lock();
-	private Condition listener =
-			new Condition (lock);
-	private Condition speaker =
-			new Condition (lock);
+	
+	//condition variable for listeners
+	private Condition listener = new Condition (lock);
+	
+	////condition variable for speakers
+	private Condition speaker = new Condition (lock);
 }
