@@ -16,7 +16,7 @@ public class KThreadJoinSelfTester {
 	}  //selfTest1()	
 	
 	/**
-	 * Test where thread spawns a ping test and joins on it.
+	 * Test where thread spawns a ping test and joins on it after it finishes.
 	 */
 	public static void selfTest2() {
 
@@ -48,7 +48,7 @@ public class KThreadJoinSelfTester {
 	};  //Runnable joinSelfRun
 	
 	/**
-	 * selfTest2: Creates a runnable obj for spawnAndJoin().
+	 * selfTest2: Creates a runnable obj for finishAndJoin().
 	 */
 	private static Runnable finishRun = new Runnable() {
 	public void run() {
@@ -137,7 +137,7 @@ public class KThreadJoinSelfTester {
 	}  //spawnAndJoin()
 	
 	/**
-	 * selfTest3: Function that runs in runnable obj.
+	 * selfTest2 & 3: Function that runs in runnable obj.
 	 * Runs a loop that announces index and yields. Other threads will wait for
 	 * this to finish when they join on it.
 	 */
