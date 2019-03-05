@@ -411,33 +411,6 @@ public class KThread {
 	Lib.assertTrue(this == currentThread);
     }
 
-    private static class PingTest implements Runnable {
-	PingTest(int which) {
-	    this.which = which;
-	}
-	
-	public void run() {
-	    for (int i=0; i<5; i++) {
-		System.out.println("*** thread " + which + " looped "
-				   + i + " times");
-		currentThread.yield();
-	    }
-	}
-
-	private int which;
-    }
-
-    /**
-     * Tests whether this module is working.
-     */
-    public static void selfTest() {
-	Lib.debug(dbgThread, "Enter KThread.selfTest");
-	
-	new KThread(new PingTest(1)).setName("forked thread").fork();
-	new KThread(new PingTest(7)).setName("forked thread").fork();
-	new PingTest(0).run();
-    }
-
     private static final char dbgThread = 't';
 
     /**
