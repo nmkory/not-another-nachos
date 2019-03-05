@@ -276,9 +276,9 @@ public class KThread {
     }
 
     /**
-     * Task I: Waits for this thread to finish. If this thread is already finished,
-     * return immediately. This method must only be called once; the second
-     * call is not guaranteed to return. This thread must not be the current
+     * Task I: Waits for this thread to finish. If this thread is already 
+     * finished, return immediately. This method must only be called once; the 
+     * second call is not guaranteed to return. This thread must not be the 
      * thread.
      */
     public void join() {
@@ -287,21 +287,22 @@ public class KThread {
 	//This thread must not be the current thread.
 	Lib.assertTrue(this != currentThread);
 	
-	//Like yield, we disable interrupts and store them into intStatus (in case already disabled)
+	//Like yield, we disable interrupts and store them into intStatus.
 	boolean intStatus = Machine.interrupt().disable();
 	
 	//If this thread is already finished, return immediately.
 	if (status == statusFinished) {
 		//restore interrupts using intStatus
+		Lib.debug(dbgThread, "Thread " + toString() + "is already finished.");
 		Machine.interrupt().restore(intStatus);
 		return;
-	}
+	} //leaves join
 	
-	//else it needs to join the sleep and wait to be added to the readyQueue
+	//else it needs to join the sleep and wait to be added to the readyQueue.
 	else {
 		waitQueue.waitForAccess(currentThread);
 		currentThread.sleep();
-	}
+	}  //when we wake, the thread we were waiting on has finish so resume
 	
 	//restore interrupts using intStatus
 	Machine.interrupt().restore(intStatus);

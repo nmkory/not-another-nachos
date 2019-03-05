@@ -4,38 +4,78 @@ import nachos.machine.Lib;
 
 public class KThreadJoinSelfTester {
 
-	
+	/**
+	 * Test where thread tries to join on itself.
+	 */
 	public static void selfTest1() {
 
-	KThread thread1 = new KThread(joinRun);
-	thread1.setName("thread1");
-	thread1.fork();
+	KThread self_joining_thread = new KThread(joinSelfRun);
+	self_joining_thread.setName("self_joining_thread");
+	self_joining_thread.fork();
 
-	}  //selfTest1()
+	}  //selfTest1()	
 	
+	/**
+	 * Test where thread spawns a ping test and joins on it.
+	 */
+	public static void selfTest3() {
+
+	KThread joining_thread = new KThread(joinRun);
+	joining_thread.setName("joining_thread");
+	joining_thread.fork();
+
+	}  //selfTest3()
+	
+	/**
+	 * selfTest1: Function that runs in runnable obj to try to join on itself.
+	 */
+	static void joinSelf() {
+	Lib.debug(dbgThread, "The " + KThread.currentThread().getName() 
+			  + " is going to try to join on itself");
+	try {
+	KThread.currentThread().join();
+	}
+	catch (Throwable e) {
+		Lib.debug(dbgThread, KThread.currentThread().getName() 
+				  + " correctly failed to join itself");
+	}
+	
+	}  //joinSelf()
+	
+	/**
+	 * selfTest3: Function that runs in runnable obj to wait on ping test.
+	 * Thread will create a ping test thread using pingTestRun
+	 * and then join on it.
+	 */
 	static void spawnAndJoin() {
-	Lib.debug(dbgThread, "Thread " + KThread.currentThread().getName() 
-			  + " is about to spawn a pingTest thread");
+	Lib.debug(dbgThread, "The " + KThread.currentThread().getName() 
+			  + " is about to spawn a ping_test thread");
 	
-	KThread pingTest = new KThread(pingTestRun);
-	pingTest.setName("pingTest");
-	pingTest.fork();
+	KThread ping_test = new KThread(pingTestRun);
+	ping_test.setName("ping_test");
+	ping_test.fork();
 	
-	Lib.debug(dbgThread, "Thread " + KThread.currentThread().getName() 
-			  + " has spawned " + pingTest.getName() + " and will join on it"); 
+	Lib.debug(dbgThread, "The " + KThread.currentThread().getName() 
+			  + " has spawned " + ping_test.getName() + " and will join on it"); 
 	
-	pingTest.join();
+	ping_test.join();
 	
-	Lib.debug(dbgThread, "Thread " + KThread.currentThread().getName() 
+	Lib.debug(dbgThread, "The " + KThread.currentThread().getName() 
 			  + " has resumed control ");
 	}  //spawnAndJoin()
 	
+	/**
+	 * selfTest3: Function that runs in runnable obj.
+	 * Runs a loop that announces index and yields. Other threads will wait for
+	 * this to finish when they join on it.
+	 */
 	static void pingTestRunner() {
 	Lib.debug(dbgThread, "Thread " + KThread.currentThread().getName() 
 			  + " is about to run pingTest");
 	
 	for (int i=0; i<5; i++) { // You may adjust the number of iterations
-		Lib.debug(dbgThread, "Thread " + KThread.currentThread().getName() + " looped " + i + " times");
+		Lib.debug(dbgThread, "Thread " + KThread.currentThread().getName() 
+				  + " looped " + (i + 1) + " times");
         KThread.yield();
     }
 	
@@ -43,18 +83,34 @@ public class KThreadJoinSelfTester {
 			  + " has ended pingTest");  
 	}  //pingTestRunner()
 	
-	
-	private static Runnable pingTestRun = new Runnable() {
+	/**
+	 * selfTest1: Creates a runnable obj for joinSelf().
+	 */
+	private static Runnable joinSelfRun = new Runnable() {
 	public void run() {
-		pingTestRunner();
+		joinSelf();
 	}
-	};  //Runnable speakerRun
+	};  //Runnable joinSelfRun
 	
+	/**
+	 * selfTest3: Creates a runnable obj for spawnAndJoin().
+	 */
 	private static Runnable joinRun = new Runnable() {
 	public void run() {
 		spawnAndJoin();
 	}
-	};  //Runnable speakerRun
+	};  //Runnable joinRun
+	
+	/**
+	 * selfTest3: Creates a runnable obj for pingTestRunner().
+	 */
+	private static Runnable pingTestRun = new Runnable() {
+	public void run() {
+		pingTestRunner();
+	}
+	};  //Runnable pingTestRun
+	
+
 	
 	//dbgThread = 't' variable needed for debug output
 	private static final char dbgThread = 't';
