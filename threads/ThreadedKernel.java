@@ -58,7 +58,7 @@ public class ThreadedKernel extends Kernel {
     //KThreadJoinSelfTester.selfTest2();
     //KThreadJoinSelfTester.selfTest3();
     //KThreadJoinSelfTester.selfTest4();
-    KThreadJoinSelfTester.selfTest5();
+    //KThreadJoinSelfTester.selfTest5();
     
     //CommSelfTester.selfTest1();
     //CommSelfTester.selfTest2();
