@@ -55,6 +55,24 @@ public class KThreadJoinSelfTester {
 	}  //selfTest4()
 	
 	/**
+	 * Test where join daisy chains using main.
+	 */
+	public static void selfTest5() {
+
+	KThread joining_thread = new KThread(joinRun);
+	joining_thread.setName("joining_thread");
+	joining_thread.fork();
+	
+	Lib.debug(dbgThread, KThread.currentThread().getName() + " has spawned " 
+	          + joining_thread.getName() + " and will join on it");
+	joining_thread.join();
+	
+	Lib.debug(dbgThread, KThread.currentThread().getName() 
+			  + " has resumed control");
+
+	}  //selfTest5()
+	
+	/**
 	 * selfTest1: Creates a runnable obj for joinSelf().
 	 */
 	private static Runnable joinSelfRun = new Runnable() {
