@@ -39,6 +39,22 @@ public class KThreadJoinSelfTester {
 	}  //selfTest3()
 	
 	/**
+	 * Test where thread spawns many threads that all join on ping test.
+	 */
+	public static void selfTest4() {
+
+	for (int i = 0; i < 5; i++) {
+		new KThread(joinerRun).setName("Joiner " 
+	                                   + Integer.toString(i + 1)).fork();
+	}
+	
+	join_on_me = new KThread(pingTestRun);
+	join_on_me.setName("join_on_me thread");
+	join_on_me.fork();
+
+	}  //selfTest4()
+	
+	/**
 	 * selfTest1: Creates a runnable obj for joinSelf().
 	 */
 	private static Runnable joinSelfRun = new Runnable() {
@@ -73,6 +89,15 @@ public class KThreadJoinSelfTester {
 		pingTestRunner();
 	}
 	};  //Runnable pingTestRun
+	
+	/**
+	 * selfTest4: Creates a runnable obj for joinerRunner().
+	 */
+	private static Runnable joinerRun = new Runnable() {
+	public void run() {
+		joinerRunner();
+	}
+	};  //Runnable joinerRun
 	
 	/**
 	 * selfTest1: Function that runs in runnable obj to try to join on itself.
@@ -155,8 +180,24 @@ public class KThreadJoinSelfTester {
 			  + " has ended pingTest");  
 	}  //pingTestRunner()
 	
+	/**
+	 * selfTest4: Function that runs in runnable obj to join on join_on_me.
+	 */
+	static void joinerRunner() {
+	Lib.debug(dbgThread, "The " + KThread.currentThread().getName() 
+			  + " is going to join on join_on_me");
+
+	join_on_me.join();
+	
+	Lib.debug(dbgThread, "The " + KThread.currentThread().getName() 
+			  + " has finished");
+
+	
+	}  //joinerRunner()
 
 	
 	//dbgThread = 't' variable needed for debug output
 	private static final char dbgThread = 't';
+	
+	private static KThread join_on_me = null;
 }  //KThreadJoinSelfTester class
