@@ -1,9 +1,11 @@
 package nachos.threads;
 import nachos.ag.BoatGrader;
+import nachos.machine.Lib;
 
 public class Boat
 {
 	static BoatGrader bg;
+	static boolean not_done;
 	static boolean boat_is_on_oahu;
 	static Lock lock;
 	static Condition child_on_oahu;
@@ -20,11 +22,14 @@ public class Boat
 	{
 		BoatGrader b = new BoatGrader();
 
-		//	System.out.println("\n ***Testing Boats with only 2 children***");
-		//	begin(0, 2, b);
+		System.out.println("\n ***Testing Boats with only 2 children***");
+		begin(0, 2, b);
 
-//		System.out.println("\n ***Testing Boats with 4 children, 2 adult***");
-//		begin(2, 2, b);
+		//		System.out.println("\n ***Testing Boats with only 2 children, 1 adult***");
+		//		begin(1, 2, b);
+
+		//		System.out.println("\n ***Testing Boats with 2 children, 2 adult***");
+		//		begin(2, 2, b);
 
 		//  	System.out.println("\n ***Testing Boats with 3 children, 3 adults***");
 		//  	begin(3, 3, b);
@@ -37,6 +42,7 @@ public class Boat
 		bg = b;
 
 		// Instantiate global variables here
+		not_done = true;
 		boat_is_on_oahu = true;
 		lock = new Lock();
 		child_on_oahu = new Condition(lock);
@@ -60,6 +66,10 @@ public class Boat
 		//		KThread t = new KThread(r);
 		//		t.setName("Sample Boat Thread");
 		//		t.fork();
+//
+//				bg.ChildRowToMolokai();
+//				bg.ChildRideToMolokai();
+
 
 		Runnable r_child = new Runnable() {
 			public void run() {
@@ -72,16 +82,21 @@ public class Boat
 				AdultItinerary();
 			}
 		};
-		
+
+
+
+
 		for (int i = 0; i < adults; i++) {
 			new KThread(r_adult).setName("Adult " + Integer.toString(i+1)).fork();
 		}
-		
+
 		for (int i = 0; i < children; i++) {
 			new KThread(r_child).setName("Child " + Integer.toString(i+1)).fork();
 		}
 
-
+		while (not_done) 
+	    	KThread.yield();
+	    
 
 
 	}
@@ -91,7 +106,6 @@ public class Boat
 		lock.acquire();
 		//System.out.println(num_child_on_molokai);
 		while(true) {
-			//[TODO] fix variable so it knows how many children on Oahu
 			//This adult can know how many children are on molokai because it has
 			//seen them leave Oahu
 			if (!boat_is_on_oahu || (total_children - num_child_on_molokai) > 1) {
@@ -99,7 +113,7 @@ public class Boat
 				child_on_oahu.wakeAll();
 				adult_on_oahu.sleep();
 			}
-			
+
 			else {
 				if (children_on_boat == 0) {
 					//row yourself to the other island and wake a child up so they can bring the boat back
@@ -109,7 +123,7 @@ public class Boat
 					child_on_molokai.wake();
 					adult_on_molokai.sleep();
 				}
-				
+
 
 			}
 		}
@@ -141,7 +155,7 @@ public class Boat
 					children_on_boat++;
 					child_on_oahu.wakeAll();
 					child_on_molokai.sleep();
-					
+
 					//this child is woken up on molokai by an adult
 					bg.ChildRowToOahu();
 					boat_is_on_oahu = true;
@@ -150,7 +164,7 @@ public class Boat
 					adult_on_oahu.wakeAll();
 					child_on_oahu.wakeAll();
 					child_on_oahu.sleep();
-					
+
 				}
 
 				else if (children_on_boat == 1) {
@@ -163,6 +177,7 @@ public class Boat
 					num_child_on_molokai++;
 					if (num_child_on_molokai == total_children && num_adult_on_molokai == total_adults) {
 						//System.out.println("We're done!");
+						not_done = false;
 						return;
 					}
 					else {
