@@ -51,6 +51,7 @@ public class ThreadedKernel extends Kernel {
     
     
     /** Uncomment tests to see if things work. */
+    //Boat.selfTest();
 	//Semaphore.selfTest();
 	//SynchList.selfTest();
     
