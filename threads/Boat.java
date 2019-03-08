@@ -1,6 +1,5 @@
 package nachos.threads;
 import nachos.ag.BoatGrader;
-import nachos.machine.Lib;
 
 /*
  * Class Boat contains the solution and code for Task VI. It contains the all 
@@ -26,12 +25,12 @@ public class Boat
 	static int children_on_boat;
 	
 	/*
-	 * selfTest() tests our Task VI. Uncomment each respective test to see
-	 * how boat behaves.
+	 * selfTest() tests our Task VI. Uncomment BoatGrader b = new BoatGrader()
+	 * and one or more tests to see how boat behaves respectively.
 	 */
 	public static void selfTest()
 	{
-	BoatGrader b = new BoatGrader();
+//	BoatGrader b = new BoatGrader();
 
 //	System.out.println("\n ***Testing Boats with only 2 children***");
 //	begin(0, 2, b);
@@ -185,65 +184,84 @@ public class Boat
 	 */
 	static void ChildItinerary()
 	{
-		lock.acquire();
+	// child threads can only operate with the lock atomically
+	lock.acquire();
+	
+	// while there are still adults and children not on Molokai
+	while(true) {
+		
+		// if the boat is not on Oahu
+		if (!boat_is_on_oahu) {
+			
+			//sleep and wait for boat for boat to arrive
+			child_on_oahu.sleep();
+		}  // boat should be on Oahu when woken
+		
+		//  else time to load onto boat
+		else {
+			
+			// if this child will be the first into the boat, it will be a
+			// passenger and wait for a rower
+			if (children_on_boat == 0) {
+				
+				// increment boat counter and wake sleeping children that could
+				// ferry us, and sleep on Molokai
+				children_on_boat++;
+				child_on_oahu.wakeAll();
+				child_on_molokai.sleep();
 
-		while(true) {
-			if (!boat_is_on_oahu) {
+				// this child is woken up on Molokai by an adult to ferry boat
+				// for other adults on Oahu or last children on Oahu
+				bg.ChildRowToOahu();
+				boat_is_on_oahu = true;
+				num_child_on_molokai--;
+				children_on_boat = 0;
+				adult_on_oahu.wakeAll();
+				child_on_oahu.wakeAll();
 				child_on_oahu.sleep();
-			}
-			else {
-				if (children_on_boat == 0) {
-					children_on_boat++;
-					child_on_oahu.wakeAll();
-					child_on_molokai.sleep();
 
-					//this child is woken up on Molokai by an adult
+			}
+
+			// else this child should be a rower if there is a child in the boat
+			else if (children_on_boat == 1) {
+				
+				// two children always bring the boat back from Oahu and check
+				// if they are done before returning to Oahu for an adult
+				children_on_boat++;
+				bg.ChildRowToMolokai();
+				bg.ChildRideToMolokai();
+				boat_is_on_oahu = false;
+				num_child_on_molokai++;
+				num_child_on_molokai++;
+				
+				// check if we are all done
+				if (num_child_on_molokai == total_children && 
+					num_adult_on_molokai == total_adults) {
+					
+					// set terminal bool to false to end all loops and return
+					not_done = false;
+					return;
+				}  // boat terminates after this if statement is executed
+				
+				// else we are not done so we need to send one back to Oahu
+				else {
 					bg.ChildRowToOahu();
-					boat_is_on_oahu = true;
 					num_child_on_molokai--;
 					children_on_boat = 0;
-					adult_on_oahu.wakeAll();
+					boat_is_on_oahu = true;
 					child_on_oahu.wakeAll();
+					adult_on_oahu.wakeAll();
 					child_on_oahu.sleep();
+				}  // else one child returns to Oahu for more children or adults
+			} // else if children_on_boat == 1, we row to Molokai and check end
+			
+			// for some reason boat is full
+			else {
+				child_on_oahu.sleep();
+			}  // else we slept until woken up and re check boat in loop
+		}  //  else checked boat but still are not done
+	}  //while child still need to get to Molokai
 
-				}
+	}  // ChildItinerary()
 
-				else if (children_on_boat == 1) {
-					//two children always bring the boat back and check if they are done
-					children_on_boat++;
-					bg.ChildRowToMolokai();
-					bg.ChildRideToMolokai();
-					boat_is_on_oahu = false;
-					num_child_on_molokai++;
-					num_child_on_molokai++;
-					if (num_child_on_molokai == total_children && num_adult_on_molokai == total_adults) {
-						//System.out.println("We're done!");
-						not_done = false;
-						return;
-					}
-					else {
-						bg.ChildRowToOahu();
-						num_child_on_molokai--;
-						children_on_boat = 0;
-						boat_is_on_oahu = true;
-						child_on_oahu.wakeAll();
-						adult_on_oahu.wakeAll();
-						child_on_oahu.sleep();
-					}
-				}
-
-				else {
-					child_on_oahu.sleep();
-				}
-
-			}
-		}
-
-
-
-
-	}
-
-	
-
-}
+}  // class Boat
