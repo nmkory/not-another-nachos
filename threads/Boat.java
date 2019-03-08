@@ -2,6 +2,13 @@ package nachos.threads;
 import nachos.ag.BoatGrader;
 import nachos.machine.Lib;
 
+/*
+ * Class Boat contains the solution and code for Task VI. It contains the all 
+ * self tests, runnable objects, and a static BoatGrader object that we
+ * store our itinerary/solution. The grader will trap main and make it yield
+ * while the results are generated. Once a solution is reached, main is
+ * released. 
+ */
 public class Boat
 {
 	static BoatGrader bg;
@@ -17,7 +24,11 @@ public class Boat
 	static int num_child_on_molokai;
 	static int num_adult_on_molokai;
 	static int children_on_boat;
-
+	
+	/*
+	 * selfTest() tests our Task VI. Uncomment each respective test to see
+	 * how boat behaves.
+	 */
 	public static void selfTest()
 	{
 	BoatGrader b = new BoatGrader();
@@ -47,6 +58,12 @@ public class Boat
 //	begin(23, 17, b);
 	}  // selfTest()
 
+	/*
+	 * begin() contains the Task VI code. It takes in the starting amount of 
+	 * adults on Oahu, the starting amount of children on Oahu, and a BoatGrader
+	 * object that we assign to our static BoatGrader object so we can store
+	 * our itinerary/solution.
+	 */
 	public static void begin( int adults, int children, BoatGrader b )
 	{
 	// Store the externally generated autograder in a class
@@ -106,7 +123,16 @@ public class Boat
 	       bg.AdultRowToMolokai();
 	   indicates that an adult has rowed the boat across to Molokai
 	*/
-
+	
+	/*
+	 * AdultItinerary() plans how adult threads will get to Molokai.
+	 * They will be spawned by begin() and will immediately sleep on Oahu.
+	 * Once all children threads have finished the trip to Molokai, two threads
+	 * will remain to ferry the boat back and forth so adults can make the trip
+	 * to Molokai. Once all adults are on Molokai, the final two children 
+	 * threads will call return and change the while loop bool not_done to
+	 * false.
+	 */
 	static void AdultItinerary()
 	{
 	// adult threads can only operate with the lock atomically
@@ -148,6 +174,15 @@ public class Boat
 	
 	}  // AdultItinerary()
 
+	/*
+	 * ChildItinerary() plans how child threads will get to Molokai.
+	 * They will be spawned by begin() and will immediately move to Oahu.
+	 * Once all children threads have finished the trip to Molokai, two threads
+	 * will remain to ferry the boat back and forth so adults can make the trip
+	 * to Molokai. Once all adults are on Molokai, the final two children 
+	 * threads will call return and change the while loop bool not_done to
+	 * false.
+	 */
 	static void ChildItinerary()
 	{
 		lock.acquire();
@@ -162,7 +197,7 @@ public class Boat
 					child_on_oahu.wakeAll();
 					child_on_molokai.sleep();
 
-					//this child is woken up on molokai by an adult
+					//this child is woken up on Molokai by an adult
 					bg.ChildRowToOahu();
 					boat_is_on_oahu = true;
 					num_child_on_molokai--;
@@ -206,21 +241,9 @@ public class Boat
 
 
 
-		//last release
-		//lock.release();
+
 	}
 
-	static void SampleItinerary()
-	{
-		// Please note that this isn't a valid solution (you can't fit
-		// all of them on the boat). Please also note that you may not
-		// have a single thread calculate a solution and then just play
-		// it back at the autograder -- you will be caught.
-		System.out.println("\n ***Everyone piles on the boat and goes to Molokai***");
-		bg.AdultRowToMolokai();
-		bg.ChildRideToMolokai();
-		bg.AdultRideToMolokai();
-		bg.ChildRideToMolokai();
-	}
+	
 
 }
