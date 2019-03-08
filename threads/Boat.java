@@ -20,127 +20,133 @@ public class Boat
 
 	public static void selfTest()
 	{
-		BoatGrader b = new BoatGrader();
+	BoatGrader b = new BoatGrader();
 
-		System.out.println("\n ***Testing Boats with only 2 children***");
-		begin(0, 2, b);
+//	System.out.println("\n ***Testing Boats with only 2 children***");
+//	begin(0, 2, b);
 
-		//		System.out.println("\n ***Testing Boats with only 2 children, 1 adult***");
-		//		begin(1, 2, b);
+//	System.out.println("\n ***Testing Boats with only 100 children***");
+//	begin(0, 100, b);
 
-		//		System.out.println("\n ***Testing Boats with 2 children, 2 adult***");
-		//		begin(2, 2, b);
+//	System.out.println("\n ***Testing Boats with only 2 children, 1 adult***");
+//	begin(1, 2, b);
 
-		//  	System.out.println("\n ***Testing Boats with 3 children, 3 adults***");
-		//  	begin(3, 3, b);
-	}
+//	System.out.println("\n ***Testing Boats with 3 children, 1 adult***");
+//	begin(1, 3, b);
+
+//  System.out.println("\n ***Testing Boats with 2 children, 2 adults***");
+//  begin(2, 2, b);
+
+//  System.out.println("\n ***Testing Boats with 3 children, 2 adults***");
+//  begin(2, 3, b);
+
+// 	System.out.println("\n ***Testing Boats with 2 children, 100 adults***");
+//	begin(100, 2, b);
+
+//	System.out.println("\n ***Testing Boats with 17 children, 23 adults***");
+//	begin(23, 17, b);
+	}  // selfTest()
 
 	public static void begin( int adults, int children, BoatGrader b )
 	{
-		// Store the externally generated autograder in a class
-		// variable to be accessible by children.
-		bg = b;
+	// Store the externally generated autograder in a class
+	// variable to be accessible by children.
+	bg = b;
 
-		// Instantiate global variables here
-		not_done = true;
-		boat_is_on_oahu = true;
-		lock = new Lock();
-		child_on_oahu = new Condition(lock);
-		child_on_molokai = new Condition(lock);
-		adult_on_oahu = new Condition(lock);
-		adult_on_molokai = new Condition(lock);
-		total_children = children;
-		total_adults = adults;
-		num_child_on_molokai = 0;
-		num_adult_on_molokai = 0;
-		children_on_boat = 0;
-
-		// Create threads here. See section 3.4 of the Nachos for Java
-		// Walkthrough linked from the projects page.
-
-		//		Runnable r = new Runnable() {
-		//			public void run() {
-		//				SampleItinerary();
-		//			}
-		//		};
-		//		KThread t = new KThread(r);
-		//		t.setName("Sample Boat Thread");
-		//		t.fork();
-//
-//				bg.ChildRowToMolokai();
-//				bg.ChildRideToMolokai();
-
-
-		Runnable r_child = new Runnable() {
-			public void run() {
-				ChildItinerary();
-			}
-		};
-
-		Runnable r_adult = new Runnable() {
-			public void run() {
-				AdultItinerary();
-			}
-		};
-
-
-
-
-		for (int i = 0; i < adults; i++) {
-			new KThread(r_adult).setName("Adult " + Integer.toString(i+1)).fork();
+	// Instantiate global variables here
+	not_done = true;
+	boat_is_on_oahu = true;
+	lock = new Lock();
+	child_on_oahu = new Condition(lock);
+	child_on_molokai = new Condition(lock);
+	adult_on_oahu = new Condition(lock);
+	adult_on_molokai = new Condition(lock);
+	total_children = children;
+	total_adults = adults;
+	num_child_on_molokai = 0;
+	num_adult_on_molokai = 0;
+	children_on_boat = 0;
+		
+	// Define runnable object for child thread.
+	Runnable r_child = new Runnable() {
+		public void run() {
+			ChildItinerary();
 		}
+	};  // r_child Runnable()
 
-		for (int i = 0; i < children; i++) {
-			new KThread(r_child).setName("Child " + Integer.toString(i+1)).fork();
+	// Define runnable object for adult thread.
+	Runnable r_adult = new Runnable() {
+		public void run() {
+			AdultItinerary();
 		}
+	};  // r_adult Runnable()
 
-		while (not_done) 
-	    	KThread.yield();
+
+
+	// Spawn all adult threads.
+	for (int i = 0; i < adults; i++) {
+		new KThread(r_adult).setName("Adult " + Integer.toString(i+1)).fork();
+	}  // after this for loop, all adult threads are spawned and sleeping
+
+	// Spawn all child threads.
+	for (int i = 0; i < children; i++) {
+		new KThread(r_child).setName("Child " + Integer.toString(i+1)).fork();
+	}  // after this for loop, all child threads are spawned and start running
+	
+	// hold main thread while solutions calls are made to the BoatGrader
+	while (not_done) 
+    	KThread.yield();
+	//  while loop ends when last children and all adults are on Molokai
 	    
-
-
-	}
-
-	static void AdultItinerary()
-	{
-		lock.acquire();
-		//System.out.println(num_child_on_molokai);
-		while(true) {
-			//This adult can know how many children are on molokai because it has
-			//seen them leave Oahu
-			if (!boat_is_on_oahu || (total_children - num_child_on_molokai) > 1) {
-				//go to sleep if boat is not there or let children go first
-				child_on_oahu.wakeAll();
-				adult_on_oahu.sleep();
-			}
-
-			else {
-				if (children_on_boat == 0) {
-					//row yourself to the other island and wake a child up so they can bring the boat back
-					bg.AdultRowToMolokai();
-					num_adult_on_molokai++;
-					boat_is_on_oahu = false;
-					child_on_molokai.wake();
-					adult_on_molokai.sleep();
-				}
-
-
-			}
-		}
-
-
-
-		//last release
-		//lock.release();
-
-		/* This is where you should put your solutions. Make calls
+	}  // begin()
+	
+	/* This is where you should put your solutions. Make calls
 	   to the BoatGrader to show that it is synchronized. For
 	   example:
 	       bg.AdultRowToMolokai();
 	   indicates that an adult has rowed the boat across to Molokai
-		 */
+	*/
 
-	}
+	static void AdultItinerary()
+	{
+	// adult threads can only operate with the lock atomically
+	lock.acquire();
+	
+	// while there are still adults not asleep on Molokai
+	while(true) {
+		
+		/*
+		 * [NOTE] Using num_child_on_molokai to determine children on Oahu. Per
+		 * specifications, this adult can know how many children are on Molokai 
+		 * because it has seen them leave Oahu. It can also see children on
+		 * Oahu.  If the boat is not on Oaku or if there is more than one child
+		 * on Oahu...
+		 */
+		if (!boat_is_on_oahu || (total_children - num_child_on_molokai) > 1) {
+			
+			//  go to sleep and let children go first
+			child_on_oahu.wakeAll();
+			adult_on_oahu.sleep();
+		}  // after if, boat is on Oahu and children do not need it.
+
+		// check the boat if there are children on it
+		else {
+			
+			// if there are no child passengers in the boat
+			if (children_on_boat == 0) {
+				
+				// row adult self to Molokai and wake one child up so it can 
+				// bring the boat back
+				bg.AdultRowToMolokai();
+				num_adult_on_molokai++;
+				boat_is_on_oahu = false;
+				child_on_molokai.wake();
+				adult_on_molokai.sleep();
+			}  // after if, adult sleeps on Molokai, gives boat to Molokai child
+		}  // else check that boat can be used, otherwise restart outer while 
+	}  //while adult still need to get to Molokai
+	
+	}  // AdultItinerary()
 
 	static void ChildItinerary()
 	{
