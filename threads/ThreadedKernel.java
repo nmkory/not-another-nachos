@@ -49,8 +49,9 @@ public class ThreadedKernel extends Kernel {
     //variable main stores main os KThread in local context for atom comparison
     KThread main = KThread.currentThread();
     
-    Boat.selfTest();
+    
     /** Uncomment tests to see if things work. */
+    //Boat.selfTest();
 	//Semaphore.selfTest();
 	//SynchList.selfTest();
     

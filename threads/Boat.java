@@ -50,11 +50,11 @@ public class Boat
 //  System.out.println("\n ***Testing Boats with 3 children, 2 adults***");
 //  begin(2, 3, b);
 
-// 	System.out.println("\n ***Testing Boats with 2 children, 100 adults***");
-//	begin(100, 2, b);
+ 	System.out.println("\n ***Testing Boats with 2 children, 100 adults***");
+	begin(100, 2, b);
 
-	System.out.println("\n ***Testing Boats with 17 children, 23 adults***");
-	begin(23, 17, b);
+//	System.out.println("\n ***Testing Boats with 17 children, 23 adults***");
+//	begin(23, 17, b);
 	}  // selfTest()
 
 	/*
@@ -147,29 +147,22 @@ public class Boat
 		 * Oahu.  If the boat is not on Oaku or if there is more than one child
 		 * on Oahu...
 		 */
-		if (!boat_is_on_oahu || (total_children - num_child_on_molokai) > 1) {
+		while (!boat_is_on_oahu || (total_children - num_child_on_molokai) > 1 
+			   || (children_on_boat != 0)) {
 			
 			//  go to sleep and let children go first
 			child_on_oahu.wakeAll();
 			adult_on_oahu.sleep();
-		}  // after if, boat is on Oahu and children do not need it.
-
-		// check the boat if there are children on it
-		else {
-			
-			// if there are no child passengers in the boat
-			if (children_on_boat == 0) {
+		}  // after while, boat is on Oahu and children do not need it.
 				
-				// row adult self to Molokai and wake one child up so it can 
-				// bring the boat back
-				bg.AdultRowToMolokai();
-				num_adult_on_molokai++;
-				boat_is_on_oahu = false;
-				child_on_molokai.wake();
-				adult_on_molokai.sleep();
-			}  // after if, adult sleeps on Molokai, gives boat to Molokai child
-		}  // else check that boat can be used, otherwise restart outer while 
-	}  //while adult still need to get to Molokai
+		// row adult self to Molokai and wake one child up so it can bring the 
+		// boat back to Oahu for another adult or last children
+		bg.AdultRowToMolokai();
+		num_adult_on_molokai++;
+		boat_is_on_oahu = false;
+		child_on_molokai.wake();
+		adult_on_molokai.sleep(); 
+	}  // while not done and adult still need to get to Molokai
 	
 	}  // AdultItinerary()
 
