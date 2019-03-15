@@ -5,7 +5,7 @@ import nachos.machine.*;
 import java.util.*;
 
 /**
- * Creates a Comparator to organize the TreeSet.
+ * Comparator to organize the TreeSet.
  */
 class Alarm_Comparator implements Comparator<KThread> {
     public int compare(KThread t1, KThread t2) {
@@ -49,11 +49,11 @@ public class Alarm {
      */
     public void timerInterrupt() {
     boolean intStatus = Machine.interrupt().disable();
-    //System.out.println("\n ***inside timer interrupt***");
+    Lib.debug(dbgThread,"\n ***inside timer interrupt***");
     
     while (sleepQueue.isEmpty() != true && sleepQueue.first().getWakeTime() < Machine.timer().getTime()) {
-    	//System.out.println("\n sleeper is waiting for: " + sleepQueue.first().getWakeTime());
-        //System.out.println("\n current time is: " + Machine.timer().getTime());
+    	Lib.debug(dbgThread,"\n sleeper is waiting for: " + sleepQueue.first().getWakeTime());
+        Lib.debug(dbgThread,"\n current time is: " + Machine.timer().getTime());
         sleepQueue.pollFirst().ready();
     }
 		
@@ -83,7 +83,7 @@ public class Alarm {
 	sleepQueue.add(KThread.currentThread());
 	
 	KThread.sleep();
-	//System.out.println("\n ***I'm asleep***");
+	Lib.debug(dbgThread,"\n ***I'm asleep***");
 	Machine.interrupt().restore(intStatus);
     }
     
@@ -92,13 +92,13 @@ public class Alarm {
     	
     	public void run() {
     		Alarm alarm = new Alarm();
-    		//System.out.println("\n ***Testing Alarm***");
-    		//System.out.println("\n Time is: " + Machine.timer().getTime());
+    		Lib.debug(dbgThread,"\n ***Testing Alarm***");
+    		Lib.debug(dbgThread,"\n Time is: " + Machine.timer().getTime());
     		alarm.waitUntil(1);
-    		//System.out.println("\n Time is: " + Machine.timer().getTime());
+    		Lib.debug(dbgThread,"\n Time is: " + Machine.timer().getTime());
     		
     		for (int i=0; i<10; i++) {
-    			//System.out.println("\n I'm awake");
+    			Lib.debug(dbgThread,"\n I'm awake");
     	    }
     	}
 
@@ -111,6 +111,9 @@ public class Alarm {
 
     	
         }
+    
+	//dbgThread = 't' variable needed for debug output
+	private static final char dbgThread = 't';
     
     private TreeSet <KThread> sleepQueue;
     
