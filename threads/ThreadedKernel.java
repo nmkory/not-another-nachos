@@ -67,6 +67,8 @@ public class ThreadedKernel extends Kernel {
     //CommSelfTester.selfTest4();
     //CommSelfTester.selfTest5();
     
+    PrioSchedulerSelfTester.selfTest1();
+    
     //for loop to keep main thread alive when testing
     for (int i = 0; i < 30; i++) {
     	if (KThread.currentThread().compareTo(main) == 0) {
