@@ -1,17 +1,22 @@
 package nachos.threads;
 
 import nachos.machine.*;
+
 import java.util.*;
 
-class Alarm_Comparator implements Comparator<KThread>{
+/**
+ * Creates a Comparator to organize the TreeSet.
+ */
+class Alarm_Comparator implements Comparator<KThread> {
     public int compare(KThread t1, KThread t2) {
-        if(t1.getWakeTime() > t2.getWakeTime()){
-            return 1;
-        } else {
-            return -1;
-        }
+    
+    if (t1.getWakeTime() > t2.getWakeTime()) 
+        return 1;   
+    
+    else 
+        return -1;   
     }
-}
+}  //Alarm_Comparator()
 
 
 /**
@@ -27,12 +32,14 @@ public class Alarm {
      * alarm.
      */
     public Alarm() {
+    
+    //constructor initiates sleepQueue with the Alarm_Comparator
     sleepQueue = new TreeSet <KThread> (new Alarm_Comparator());
     
 	Machine.timer().setInterruptHandler(new Runnable() {
 		public void run() { timerInterrupt(); }
 	    });
-    }
+    } //Alarm()
 
     /**
      * The timer interrupt handler. This is called by the machine's timer
@@ -41,10 +48,17 @@ public class Alarm {
      * that should be run.
      */
     public void timerInterrupt() {
-    while (sleepQueue.first().getWakeTime() > Machine.timer().getTime())
-    	sleepQueue.pollFirst().ready();
+    boolean intStatus = Machine.interrupt().disable();
+    //System.out.println("\n ***inside timer interrupt***");
     
-    KThread.currentThread().yield();
+    while (sleepQueue.isEmpty() != true && sleepQueue.first().getWakeTime() < Machine.timer().getTime()) {
+    	//System.out.println("\n sleeper is waiting for: " + sleepQueue.first().getWakeTime());
+        //System.out.println("\n current time is: " + Machine.timer().getTime());
+        sleepQueue.pollFirst().ready();
+    }
+		
+    Machine.interrupt().restore(intStatus);
+    //KThread.currentThread().yield();
     }
 
     /**
@@ -63,11 +77,40 @@ public class Alarm {
      */
     public void waitUntil(long x) {
 	// for now, cheat just to get something working (busy waiting is bad)
+    boolean intStatus = Machine.interrupt().disable();
 	long wakeTime = Machine.timer().getTime() + x;
 	KThread.currentThread().setWakeTime(wakeTime);
 	sleepQueue.add(KThread.currentThread());
+	
 	KThread.sleep();
+	//System.out.println("\n ***I'm asleep***");
+	Machine.interrupt().restore(intStatus);
     }
+    
+    private static class PingTest implements Runnable {
+
+    	
+    	public void run() {
+    		Alarm alarm = new Alarm();
+    		//System.out.println("\n ***Testing Alarm***");
+    		//System.out.println("\n Time is: " + Machine.timer().getTime());
+    		alarm.waitUntil(1);
+    		//System.out.println("\n Time is: " + Machine.timer().getTime());
+    		
+    		for (int i=0; i<10; i++) {
+    			//System.out.println("\n I'm awake");
+    	    }
+    	}
+
+
+        }
+    
+    public static void selfTest() {
+
+    	new KThread(new PingTest()).setName("ping").fork();
+
+    	
+        }
     
     private TreeSet <KThread> sleepQueue;
     

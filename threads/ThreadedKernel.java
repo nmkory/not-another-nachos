@@ -67,8 +67,10 @@ public class ThreadedKernel extends Kernel {
     //CommSelfTester.selfTest4();
     //CommSelfTester.selfTest5();
     
+    Alarm.selfTest();
+    
     //for loop to keep main thread alive when testing
-    for (int i = 0; i < 30; i++) {
+    for (int i = 0; i < 300; i++) {
     	if (KThread.currentThread().compareTo(main) == 0) {
     		//debug statement to see when main yields
     		Lib.debug(dbgThread, "main thread yielding"); 
