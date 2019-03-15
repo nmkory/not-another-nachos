@@ -48,18 +48,31 @@ public class Alarm {
      * that should be run.
      */
     public void timerInterrupt() {
-    boolean intStatus = Machine.interrupt().disable();
-    Lib.debug(dbgThread,"\n ***inside timer interrupt***");
+    boolean awake = false;
     
-    while (sleepQueue.isEmpty() != true && sleepQueue.first().getWakeTime() < Machine.timer().getTime()) {
-    	Lib.debug(dbgThread,"\n sleeper is waiting for: " + sleepQueue.first().getWakeTime());
+    //disable and store interrupts
+    boolean intStatus = Machine.interrupt().disable();
+    Lib.debug(dbgThread,"\n ***Inside timer interrupt***");
+    
+    //short circuit if sleepQueue empty, check top wakeTime against current time
+    while (sleepQueue.isEmpty() != true 
+    	   && sleepQueue.first().getWakeTime() < Machine.timer().getTime()) {
+    	
+    	Lib.debug(dbgThread,"\n sleeping thread " + sleepQueue.first().getName()
+    			  + " is waiting for: " + sleepQueue.first().getWakeTime());
         Lib.debug(dbgThread,"\n current time is: " + Machine.timer().getTime());
+        
         sleepQueue.pollFirst().ready();
-    }
-		
+        awake = true;
+    }  //after while loop all sleeping threads that should be awake are on ready
+	
+    //restore interrupt status
     Machine.interrupt().restore(intStatus);
-    //KThread.currentThread().yield();
-    }
+    
+    //force a context switch if there is another thread that should be run
+    if (awake)
+    	KThread.currentThread().yield();
+    } //timerInterrupt()
 
     /**
      * Put the current thread to sleep for at least <i>x</i> ticks,
@@ -76,47 +89,60 @@ public class Alarm {
      * @see	nachos.machine.Timer#getTime()
      */
     public void waitUntil(long x) {
-	// for now, cheat just to get something working (busy waiting is bad)
+    
+    //disable and store interrupts
     boolean intStatus = Machine.interrupt().disable();
-	long wakeTime = Machine.timer().getTime() + x;
-	KThread.currentThread().setWakeTime(wakeTime);
+
+    //set the current thread's wait time using parameter
+	KThread.currentThread().setWakeTime(Machine.timer().getTime() + x);
+	
+	//add current thread to the sleep queue
 	sleepQueue.add(KThread.currentThread());
 	
+	//go to sleep - to be woken later during timerInterrupt()
 	KThread.sleep();
-	Lib.debug(dbgThread,"\n ***I'm asleep***");
+	
+	//we have been woken, so restore interrupt status and resume
+	Lib.debug(dbgThread,"\n " + KThread.currentThread().getName() + " woke");
 	Machine.interrupt().restore(intStatus);
-    }
+    }  //waitUntil()
     
+    
+    /**
+     * selfTest1(): runs a PingTest() that sets an alarm and sleeps until woken
+     * then runs a for loop
+     */
     private static class PingTest implements Runnable {
 
-    	
-    	public void run() {
-    		Alarm alarm = new Alarm();
-    		Lib.debug(dbgThread,"\n ***Testing Alarm***");
-    		Lib.debug(dbgThread,"\n Time is: " + Machine.timer().getTime());
-    		alarm.waitUntil(1);
-    		Lib.debug(dbgThread,"\n Time is: " + Machine.timer().getTime());
-    		
-    		for (int i=0; i<10; i++) {
-    			Lib.debug(dbgThread,"\n I'm awake");
-    	    }
-    	}
+	public void run() {
+		Alarm alarm = new Alarm();
+		Lib.debug(dbgThread,"\n ***selfTest1 Alarm***");
+		Lib.debug(dbgThread,"\n Time is: " + Machine.timer().getTime());
+		alarm.waitUntil(400);
+		Lib.debug(dbgThread,"\n Time is: " + Machine.timer().getTime());
+		
+		for (int i=0; i<10; i++) {
+			Lib.debug(dbgThread,"\n " + KThread.currentThread().getName() 
+					  + " is awake");
+	    } 
+	} //PingTest run()
 
-
-        }
+    }  //class PingTest
     
-    public static void selfTest() {
+    /**
+     * Test if alarm works with just one object, should run long enough to not
+     * try an empty sleepQueue
+     */
+    public static void selfTest1() {
 
-    	new KThread(new PingTest()).setName("ping").fork();
-
-    	
-        }
+    new KThread(new PingTest()).setName("ping").fork();
+	
+    }  //selfTest1()
     
 	//dbgThread = 't' variable needed for debug output
 	private static final char dbgThread = 't';
     
-    private TreeSet <KThread> sleepQueue;
-    
-    
+	//sleepQueue holds and organizes threads by the time they should wake
+    private TreeSet <KThread> sleepQueue; 
 }
 
