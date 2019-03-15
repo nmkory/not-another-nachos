@@ -60,6 +60,9 @@ public class Condition2 {
 	
         boolean state = Machine.interrupt().disable();
 	
+        if(!q.isEmpty()) {
+            q.removeFirst().ready();  
+        }
         Machine.interrupt().restore(state);
     
     }
@@ -72,8 +75,12 @@ public class Condition2 {
     
     public void wakeAll() {
 	    Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-	        boolean state = Machine.interrupt().disable();
+	    boolean state = Machine.interrupt().disable();
 
+        while (!q.isEmpty()){
+            wake();
+        }
+    
         Machine.interrupt().restore(state);     
     }
 
