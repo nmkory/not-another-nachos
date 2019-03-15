@@ -1,9 +1,8 @@
 package nachos.threads;
+
 import java.util.LinkedList;
 
 import nachos.machine.*;
-
-
 
 /**
  * An implementation of condition variables that disables interrupt()s for
@@ -25,29 +24,31 @@ public class Condition2 {
      */
     public Condition2(Lock conditionLock) {
 	this.conditionLock = conditionLock;
-	q = new LinkedList<KThread>();
 	
+	// Declare new waitQueue LinkedList for KThreads
+	waitQueue = new LinkedList<KThread>();
     }
 
     /**
      * Atomically release the associated lock and go to sleep on this condition
      * variable until another thread wakes it using <tt>wake()</tt>. The
      * current thread must hold the associated lock. The thread will
-     * automatically re-acquire the lock before <tt>sleep()</tt> returns.
+     * automatically reacquire the lock before <tt>sleep()</tt> returns.
      */
     public void sleep() {
-        // if lock is true because its held. 
-	    Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-	    boolean state = Machine.interrupt().disable();
-//linkedlist queue
-	    q.add(KThread.currentThread());
-// lock release
-	   conditionLock.release();
+	Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+	
+	//Atomically release the associated lock and go to sleep
+	conditionLock.release();
+	boolean intStatus = Machine.interrupt().disable();
 
-// do I need to sleep this?
-	    conditionLock.acquire();
+	
+	waitQueue.add(KThread.currentThread());
+	KThread.sleep();
 
-	    Machine.interrupt().restore(state);
+
+	Machine.interrupt().restore(intStatus);
+	conditionLock.acquire();	
     }
 
     /**
@@ -55,35 +56,32 @@ public class Condition2 {
      * current thread must hold the associated lock.
      */
     public void wake() {
-      
-	    Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+	Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 	
-        boolean state = Machine.interrupt().disable();
-	
-        if(!q.isEmpty()) {
-            q.removeFirst().ready();  
-        }
-        Machine.interrupt().restore(state);
-    
-    }
+	if (!waitQueue.isEmpty()) {
+	    boolean intStatus = Machine.interrupt().disable();
 
+		KThread thread = waitQueue.removeFirst();
+		if (thread != null) {
+		    thread.ready();
+		}
+		
+		Machine.interrupt().restore(intStatus);
+	}
+    }
     /**
      * Wake up all threads sleeping on this condition variable. The current
      * thread must hold the associated lock.
      */
-    
-    
     public void wakeAll() {
-	    Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-	    boolean state = Machine.interrupt().disable();
-
-        while (!q.isEmpty()){
-            wake();
-        }
+    Lib.assertTrue(conditionLock.isHeldByCurrentThread());
     
-        Machine.interrupt().restore(state);     
-    }
+    //while there are still KThreads in the waitQueue
+    while (!waitQueue.isEmpty())
+    	    wake();
+    }  //all KThreads have been woken
 
     private Lock conditionLock;
-        private LinkedList<KThread> q;
+    //linkedlist to track the sleeping KThreads
+    private LinkedList<KThread> waitQueue;
 }
