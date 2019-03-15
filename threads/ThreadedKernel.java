@@ -67,7 +67,7 @@ public class ThreadedKernel extends Kernel {
     //CommSelfTester.selfTest4();
     //CommSelfTester.selfTest5();
     
-    Alarm.selfTest1();
+    //Alarm.selfTest1();
     
     //for loop to keep main thread alive when testing
     for (int i = 0; i < 60; i++) {
