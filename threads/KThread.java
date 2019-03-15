@@ -47,6 +47,7 @@ public class KThread {
 	    tcb = new TCB();
 	}	    
 	else {
+		waitQueue = ThreadedKernel.scheduler.newThreadQueue(true);
 	    readyQueue = ThreadedKernel.scheduler.newThreadQueue(false);
 	    readyQueue.acquire(this);	    
 
@@ -191,9 +192,17 @@ public class KThread {
 	Lib.assertTrue(toBeDestroyed == null);
 	toBeDestroyed = currentThread;
 
-
 	currentThread.status = statusFinished;
 	
+	//may be null if there are no threads in the waitQueue
+	KThread lockHolder = waitQueue.nextThread();
+	
+	//while not null, ready every waitQueue thread
+	while (lockHolder != null) {
+		lockHolder.ready();
+		lockHolder = waitQueue.nextThread();
+	} //all threads are now awake
+	    
 	sleep();
     }
 
@@ -267,17 +276,38 @@ public class KThread {
     }
 
     /**
-     * Waits for this thread to finish. If this thread is already finished,
-     * return immediately. This method must only be called once; the second
-     * call is not guaranteed to return. This thread must not be the current
+     * Task I: Waits for this thread to finish. If this thread is already 
+     * finished, return immediately. This method must only be called once; the 
+     * second call is not guaranteed to return. This thread must not be the 
      * thread.
      */
     public void join() {
 	Lib.debug(dbgThread, "Joining to thread: " + toString());
 
+	//This thread must not be the current thread.
 	Lib.assertTrue(this != currentThread);
+	
+	//Like yield, we disable interrupts and store them into intStatus.
+	boolean intStatus = Machine.interrupt().disable();
+	
+	//If this thread is already finished, return immediately.
+	if (status == statusFinished) {
+		//restore interrupts using intStatus
+		Lib.debug(dbgThread, "Thread " + toString() + "is already finished.");
+		Machine.interrupt().restore(intStatus);
+		return;
+	} //leaves join
+	
+	//else it needs to join the sleep and wait to be added to the readyQueue.
+	else {
+		waitQueue.waitForAccess(currentThread);
+		currentThread.sleep();
+	}  //when we wake, the thread we were waiting on has finish so resume
+	
+	//restore interrupts using intStatus
+	Machine.interrupt().restore(intStatus);
 
-    }
+    } //join()
 
     /**
      * Create the idle thread. Whenever there are no threads ready to be run,
@@ -381,32 +411,6 @@ public class KThread {
 	Lib.assertTrue(this == currentThread);
     }
 
-    private static class PingTest implements Runnable {
-	PingTest(int which) {
-	    this.which = which;
-	}
-	
-	public void run() {
-	    for (int i=0; i<5; i++) {
-		System.out.println("*** thread " + which + " looped "
-				   + i + " times");
-		currentThread.yield();
-	    }
-	}
-
-	private int which;
-    }
-
-    /**
-     * Tests whether this module is working.
-     */
-    public static void selfTest() {
-	Lib.debug(dbgThread, "Enter KThread.selfTest");
-	
-	new KThread(new PingTest(1)).setName("forked thread").fork();
-	new PingTest(0).run();
-    }
-
     private static final char dbgThread = 't';
 
     /**
@@ -440,6 +444,8 @@ public class KThread {
     /** Number of times the KThread constructor was called. */
     private static int numCreated = 0;
 
+    //Task I: to make join work, we need to implement a waitQueue
+    private static ThreadQueue waitQueue = null;
     private static ThreadQueue readyQueue = null;
     private static KThread currentThread = null;
     private static KThread toBeDestroyed = null;
