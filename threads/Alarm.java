@@ -1,6 +1,18 @@
 package nachos.threads;
 
 import nachos.machine.*;
+import java.util.*;
+
+class Alarm_Comparator implements Comparator<KThread>{
+    public int compare(KThread t1, KThread t2) {
+        if(t1.getWakeTime() > t2.getWakeTime()){
+            return 1;
+        } else {
+            return -1;
+        }
+    }
+}
+
 
 /**
  * Uses the hardware timer to provide preemption, and to allow threads to sleep
@@ -15,6 +27,8 @@ public class Alarm {
      * alarm.
      */
     public Alarm() {
+    sleepQueue = new TreeSet <KThread> (new Alarm_Comparator());
+    
 	Machine.timer().setInterruptHandler(new Runnable() {
 		public void run() { timerInterrupt(); }
 	    });
@@ -27,7 +41,10 @@ public class Alarm {
      * that should be run.
      */
     public void timerInterrupt() {
-	KThread.currentThread().yield();
+    while (sleepQueue.first().getWakeTime() > Machine.timer().getTime())
+    	sleepQueue.pollFirst().ready();
+    
+    KThread.currentThread().yield();
     }
 
     /**
@@ -47,7 +64,13 @@ public class Alarm {
     public void waitUntil(long x) {
 	// for now, cheat just to get something working (busy waiting is bad)
 	long wakeTime = Machine.timer().getTime() + x;
-	while (wakeTime > Machine.timer().getTime())
-	    KThread.yield();
+	KThread.currentThread().setWakeTime(wakeTime);
+	sleepQueue.add(KThread.currentThread());
+	KThread.sleep();
     }
+    
+    private TreeSet <KThread> sleepQueue;
+    
+    
 }
+
