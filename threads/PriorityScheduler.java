@@ -298,11 +298,11 @@ public class PriorityScheduler extends Scheduler {
 			else if (threadA_EffPrio > threadB_EffPrio) {  // Thread A has higher effective priority
 				return 1;
 			}
-			else if (threadA.getTimestamp() > threadB.getTimestamp()) {  // Thread B has been waiting longer
-				return -1;
-			}
-			else {  // Thread A has been waiting longer
+			else if (threadA.getTimestamp() < threadB.getTimestamp()) {  // Thread A has a smaller timestamp and therefore has been waiting longer.
 				return 1;
+			}
+			else {  // Thread B has a smaller timestamp and therefore has been waiting longer.
+				return -1;
 			}
 		}
 		

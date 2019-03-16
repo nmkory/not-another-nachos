@@ -23,6 +23,83 @@ public class PrioSchedulerSelfTester {
 		highPriorityThread.fork();
 	}
 	
+	/**
+	 * A low priority thread, a high priority thread, and a mid priority thread join a thread that is doing stuff.
+	 */
+	public static void selfTest2() {
+		theThreadThatDoesStuff = new KThread(immediatelyDoStuff);
+		theThreadThatDoesStuff.setName("The Thread That Does Stuff");
+		theThreadThatDoesStuff.fork();
+		
+		KThread lowPriorityThread = new KThread(joinWithPriority2);
+		lowPriorityThread.setName("Priority 2 Thread");
+		lowPriorityThread.fork();
+		
+		KThread highPriorityThread = new KThread(joinWithPriority6);
+		highPriorityThread.setName("Priority 6 Thread");
+		highPriorityThread.fork();
+		
+		KThread midPriorityThread = new KThread(joinWithPriority4);
+		midPriorityThread.setName("Priority 4 Thread");
+		midPriorityThread.fork();
+	}
+	
+	/**
+	 * A low priority thread and two threads of equal priority join a thread that is doing stuff.
+	 * When theThreadThatDoesStuff finishes running, the two threads of equal priority should run in the order they joined.
+	 * When the two threads of equal priority finish running, the low priority thread should run.
+	 * Assuming the threads join in the same order they are initialized below, the threads should run in this order: A, C, B
+	 */
+	public static void selfTest3() {
+		theThreadThatDoesStuff = new KThread(immediatelyDoStuff);
+		theThreadThatDoesStuff.setName("The Thread That Does Stuff");
+		theThreadThatDoesStuff.fork();
+		
+		/*
+		 *  There is *probably* no guarantee that Thread A will indeed join first.
+		 *  However, we should still see the thread that joined first indeed runs first.
+		 */
+		KThread threadA = new KThread(joinWithPriority4);
+		threadA.setName("Thread A");
+		threadA.fork();
+		
+		KThread threadB = new KThread(joinWithPriority2);
+		threadB.setName("Thread B");
+		threadB.fork();
+		
+		KThread threadC = new KThread(joinWithPriority4);
+		threadC.setName("Thread C");
+		threadC.fork();
+	}
+	
+	/**
+	 * Threads with a mix of priorities join a thread that is doing some stuff.
+	 * One thread has high priority, two threads have mid (but equal) priority, and one thread has low priority.
+	 * The threads should run from highest to lowest priority with threads of equal priority running based on who joined first.
+	 * Assuming the threads join in the same order they're initialized below, the threads should run in this order: D, A, C, B
+	 */
+	public static void selfTest4() {
+		theThreadThatDoesStuff = new KThread(immediatelyDoStuff);
+		theThreadThatDoesStuff.setName("The Thread That Does Stuff");
+		theThreadThatDoesStuff.fork();
+		
+		KThread threadA = new KThread(joinWithPriority3);
+		threadA.setName("Thread A, Priority 3");
+		threadA.fork();
+		
+		KThread threadB = new KThread(joinWithPriority2);
+		threadB.setName("Thread B, Priority 2");
+		threadB.fork();
+		
+		KThread threadC = new KThread(joinWithPriority3);
+		threadC.setName("Thread C, Priority 3");
+		threadC.fork();
+		
+		KThread threadD = new KThread(joinWithPriority4);
+		threadD.setName("Thread D, Priority 4");
+		threadD.fork();
+	}
+	
 	
 	/**
 	 * A function that makes a thread do some stuff
@@ -94,13 +171,13 @@ public class PrioSchedulerSelfTester {
 	 */
 	private static Runnable joinThenDoStuff = new Runnable() {
 		public void run() {
-			Lib.debug(dbgThread, "I am " + KThread.currentThread().getName() + " and I'm going to join first!");
+			Lib.debug(dbgThread, "I am " + KThread.currentThread().getName() + " and I'm going to join before doing stuff!");
 			joinThenDoStuff();
 		}
 	};
 	
 	/**
-	 * A Runnable for a thread that will set its priority first before joining theThreadThatDoesStuff
+	 * A Runnable for a thread that will set its priority before joining theThreadThatDoesStuff
 	 * These threads have the minimum priority (0)
 	 */
 	private static Runnable joinWithMinPriority = new Runnable() {
@@ -111,9 +188,9 @@ public class PrioSchedulerSelfTester {
 	};
 	
 	/**
-	 * A Runnable for a thread that will set its priority first before joining theThreadThatDoesStuff
+	 * A Runnable for a thread that will set its priority before joining theThreadThatDoesStuff
 	 * These threads have a priority of 1
-	 * 
+	 * This runnable is technically no different than joinThenDoStuff
 	 */
 	private static Runnable joinWithPriority1 = new Runnable() {
 		public void run() {
@@ -124,7 +201,7 @@ public class PrioSchedulerSelfTester {
 	};
 	
 	/**
-	 * A Runnable for a thread that will set its priority first before joining theThreadThatDoesStuff
+	 * A Runnable for a thread that will set its priority before joining theThreadThatDoesStuff
 	 * These threads have a priority of 2
 	 */
 	private static Runnable joinWithPriority2 = new Runnable() {
@@ -136,7 +213,7 @@ public class PrioSchedulerSelfTester {
 	};
 	
 	/**
-	 * A Runnable for a thread that will set its priority first before joining theThreadThatDoesStuff
+	 * A Runnable for a thread that will set its priority before joining theThreadThatDoesStuff
 	 * These threads have a priority of 3
 	 */
 	private static Runnable joinWithPriority3 = new Runnable() {
@@ -148,7 +225,7 @@ public class PrioSchedulerSelfTester {
 	};
 	
 	/**
-	 * A Runnable for a thread that will set its priority first before joining theThreadThatDoesStuff
+	 * A Runnable for a thread that will set its priority before joining theThreadThatDoesStuff
 	 * These threads have a priority of 4
 	 */
 	private static Runnable joinWithPriority4 = new Runnable() {
@@ -160,7 +237,7 @@ public class PrioSchedulerSelfTester {
 	};
 	
 	/**
-	 * A Runnable for a thread that will set its priority first before joining theThreadThatDoesStuff
+	 * A Runnable for a thread that will set its priority before joining theThreadThatDoesStuff
 	 * These threads have a priority of 5
 	 */
 	private static Runnable joinWithPriority5 = new Runnable() {
@@ -172,7 +249,7 @@ public class PrioSchedulerSelfTester {
 	};
 	
 	/**
-	 * A Runnable for a thread that will set its priority first before joining theThreadThatDoesStuff
+	 * A Runnable for a thread that will set its priority before joining theThreadThatDoesStuff
 	 * These threads have a priority of 6
 	 */
 	private static Runnable joinWithPriority6 = new Runnable() {
@@ -184,7 +261,7 @@ public class PrioSchedulerSelfTester {
 	};
 	
 	/**
-	 * A Runnable for a thread that will set its priority first before joining theThreadThatDoesStuff
+	 * A Runnable for a thread that will set its priority before joining theThreadThatDoesStuff
 	 * These threads have the maximum priority (7)
 	 */
 	private static Runnable joinWithMaxPriority = new Runnable() {
