@@ -1,5 +1,7 @@
 package nachos.threads;
 
+import java.util.LinkedList;
+
 import nachos.machine.*;
 
 /**
@@ -22,6 +24,9 @@ public class Condition2 {
      */
     public Condition2(Lock conditionLock) {
 	this.conditionLock = conditionLock;
+	
+	// Declare new waitQueue LinkedList for KThreads
+	waitQueue = new LinkedList<KThread>();
     }
 
     /**
@@ -32,10 +37,18 @@ public class Condition2 {
      */
     public void sleep() {
 	Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-
+	
+	//Atomically release the associated lock and go to sleep
 	conditionLock.release();
+	boolean intStatus = Machine.interrupt().disable();
 
-	conditionLock.acquire();
+	
+	waitQueue.add(KThread.currentThread());
+	KThread.sleep();
+
+
+	Machine.interrupt().restore(intStatus);
+	conditionLock.acquire();	
     }
 
     /**
@@ -44,15 +57,31 @@ public class Condition2 {
      */
     public void wake() {
 	Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-    }
+	
+	if (!waitQueue.isEmpty()) {
+	    boolean intStatus = Machine.interrupt().disable();
 
+		KThread thread = waitQueue.removeFirst();
+		if (thread != null) {
+		    thread.ready();
+		}
+		
+		Machine.interrupt().restore(intStatus);
+	}
+    }
     /**
      * Wake up all threads sleeping on this condition variable. The current
      * thread must hold the associated lock.
      */
     public void wakeAll() {
-	Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-    }
+    Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+    
+    //while there are still KThreads in the waitQueue
+    while (!waitQueue.isEmpty())
+    	    wake();
+    }  //all KThreads have been woken
 
     private Lock conditionLock;
+    //linkedlist to track the sleeping KThreads
+    private LinkedList<KThread> waitQueue;
 }
