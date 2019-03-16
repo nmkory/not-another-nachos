@@ -51,7 +51,7 @@ public class ThreadedKernel extends Kernel {
     
     
     /** Uncomment tests to see if things work. */
-    //Boat.selfTest();
+    //Boat.selfTest();  //go to Boat.java and uncomment its selfTests there
 	//Semaphore.selfTest();
 	//SynchList.selfTest();
     
@@ -71,11 +71,15 @@ public class ThreadedKernel extends Kernel {
     //AlarmSelfTester.selfTest2();
     //AlarmSelfTester.selfTest3();
     
-    //for loop to keep main thread alive when testing
+    //for loop to keep main thread alive when self testing
     for (int i = 0; i < 150; i++) {
+    	
+    	//check that we're yielding main
     	if (KThread.currentThread().compareTo(main) == 0) {
+    		
     		//debug statement to see when main yields
     		Lib.debug(dbgThread, "main thread yielding"); 
+    		
     		KThread.yield();
     	}  //else this is not main thread so do not yield
     }  //for loop has yielded 30 times and os will move on to finish
