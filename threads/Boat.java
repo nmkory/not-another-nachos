@@ -32,8 +32,8 @@ public class Boat
 	{
 	BoatGrader b = new BoatGrader();
 
-//	System.out.println("\n ***Testing Boats with only 2 children***");
-//	begin(0, 2, b);
+	System.out.println("\n ***Testing Boats with only 2 children***");
+	begin(0, 2, b);
 
 //	System.out.println("\n ***Testing Boats with only 100 children***");
 //	begin(0, 100, b);
@@ -50,8 +50,8 @@ public class Boat
 //  System.out.println("\n ***Testing Boats with 3 children, 2 adults***");
 //  begin(2, 3, b);
 
- 	System.out.println("\n ***Testing Boats with 2 children, 100 adults***");
-	begin(100, 2, b);
+// 	System.out.println("\n ***Testing Boats with 2 children, 100 adults***");
+//	begin(100, 2, b);
 
 //	System.out.println("\n ***Testing Boats with 17 children, 23 adults***");
 //	begin(23, 17, b);
