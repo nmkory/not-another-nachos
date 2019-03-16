@@ -107,38 +107,6 @@ public class Alarm {
 	Machine.interrupt().restore(intStatus);
     }  //waitUntil()
     
-    
-    /**
-     * selfTest1(): runs a PingTest() that sets an alarm and sleeps until woken
-     * then runs a for loop
-     */
-    private static class PingTest implements Runnable {
-
-	public void run() {
-		Alarm alarm = new Alarm();
-		Lib.debug(dbgThread,"\n ***selfTest1 Alarm***");
-		Lib.debug(dbgThread,"\n Time is: " + Machine.timer().getTime());
-		alarm.waitUntil(400);
-		Lib.debug(dbgThread,"\n Time is: " + Machine.timer().getTime());
-		
-		for (int i=0; i<10; i++) {
-			Lib.debug(dbgThread,"\n " + KThread.currentThread().getName() 
-					  + " is awake");
-	    } 
-	} //PingTest run()
-
-    }  //class PingTest
-    
-    /**
-     * Test if alarm works with just one object, should run long enough to not
-     * try an empty sleepQueue
-     */
-    public static void selfTest1() {
-
-    new KThread(new PingTest()).setName("ping").fork();
-	
-    }  //selfTest1()
-    
 	//dbgThread = 't' variable needed for debug output
 	private static final char dbgThread = 't';
     
