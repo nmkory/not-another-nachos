@@ -12,11 +12,30 @@ public class Condition2SelfTester {
 
 
 		KThread sleeper1 = new KThread(sleepRun);
-		sleeper1.setName("sleeper1");
+		sleeper1.setName("Sleeper");
 		sleeper1.fork();
 
 		KThread waker1 = new KThread(wakeRun);
-		waker1.setName("waker1");
+		waker1.setName("Waker");
+		waker1.fork();
+
+
+		}  //selfTest1()
+		
+		/**
+		 * Test with 5 sleepers then 1 waker.
+		 */
+		public static void selfTest2() {
+			
+
+
+		for (int i = 1; i <= 5; i++) {
+			new KThread(sleepRun).setName("Sleeper "
+											+ Integer.toString(i)).fork();
+		}
+		
+		KThread waker1 = new KThread(wakeRun);
+		waker1.setName("Waker");
 		waker1.fork();
 
 
@@ -24,13 +43,25 @@ public class Condition2SelfTester {
 		
 		static void sleepFunction() {
 			Lib.debug(dbgThread, "\n Thread " + KThread.currentThread().getName() 
-					  + " is about to sleep on Condition2 \n");
+					  + " is about to wake all and sleep on Condition2 \n");
 			
 			lock.acquire();
+			sleepers_not_done++;
+			cond_2.wakeAll();
 			cond_2.sleep();
 			
 			Lib.debug(dbgThread, "\n Thread " + KThread.currentThread().getName()
-					  + " was woken by another thread \n");  
+					  + " was woken by another thread");
+			
+			sleepers_not_done--;
+			
+			Lib.debug(dbgThread, "\n Thread " + KThread.currentThread().getName()
+					  + " will decrement and wake any other sleeper or wake threads and finish \n");
+			
+			cond_2.wakeAll();
+			lock.release();
+			
+			KThread.finish();
 				
 			}  //sleepFunction()
 		
@@ -41,13 +72,30 @@ public class Condition2SelfTester {
 			lock.acquire();
 			cond_2.wake();
 			
-			Lib.debug(dbgThread, "\n Thread " + KThread.currentThread().getName() 
-					  + " is about to sleep on Condition2 \n");
 			
-			cond_2.sleep();
 			
-			Lib.debug(dbgThread, "\n Thread " + KThread.currentThread().getName()
-					  + " was woken by another thread \n");  
+			while (sleepers_not_done > 0) {
+				Lib.debug(dbgThread, "\n There are " + sleepers_not_done 
+						  + " sleepers still not done so thread " 
+						  + KThread.currentThread().getName() 
+						  + " is going to wake all and sleep on Condition2 \n");
+				cond_2.wakeAll();
+				cond_2.sleep();
+				
+				Lib.debug(dbgThread, "\n Thread " + KThread.currentThread().getName()
+						  + " was woken by another thread \n");
+			}
+			
+			Lib.debug(dbgThread, "\n All sleepers are done so thread " 
+					  + KThread.currentThread().getName() 
+					  + " is about to finish \n");
+			
+			lock.release();
+			KThread.finish();
+				
+			
+			
+			  
 				
 			}  //wakeFunction()
 		
@@ -75,10 +123,12 @@ public class Condition2SelfTester {
 		private static final char dbgThread = 't';
 		
 		//lock for condition variable and to maintain atomicity
-		static Lock lock = new Lock();
+		private static Lock lock = new Lock();
 		
 			
 		//condition variable for listeners
-		static Condition2 cond_2 = new Condition2 (lock);
+		private static Condition2 cond_2 = new Condition2 (lock);
+		
+		private static int sleepers_not_done = 0;
 }  //class Cond2SelfTester
 
