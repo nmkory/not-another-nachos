@@ -25,6 +25,7 @@ public class PrioSchedulerSelfTester {
 	
 	/**
 	 * A low priority thread, a high priority thread, and a mid priority thread join a thread that is doing stuff.
+	 * When theThreadThatDoesStuff finishes running, the threads should run in this order: High, Mid, Low
 	 */
 	public static void selfTest2() {
 		theThreadThatDoesStuff = new KThread(immediatelyDoStuff);
