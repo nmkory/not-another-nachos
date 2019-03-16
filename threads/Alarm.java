@@ -70,8 +70,10 @@ public class Alarm {
     Machine.interrupt().restore(intStatus);
     
     //force a context switch if there is another thread that should be run
-    if (awake)
+    if (awake) {
+    	awake = false;
     	KThread.currentThread().yield();
+    }
     } //timerInterrupt()
 
     /**
