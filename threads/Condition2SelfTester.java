@@ -7,9 +7,7 @@ public class Condition2SelfTester {
 		/**
 		 * Test with 1 sleeper then 1 waker.
 		 */
-		public static void selfTest1() {
-			
-
+		public static void selfTest1() {			
 
 		KThread sleeper1 = new KThread(sleepRun);
 		sleeper1.setName("Sleeper");
@@ -18,8 +16,6 @@ public class Condition2SelfTester {
 		KThread waker1 = new KThread(wakeRun);
 		waker1.setName("Waker");
 		waker1.fork();
-
-
 		}  //selfTest1()
 		
 		/**
@@ -27,20 +23,20 @@ public class Condition2SelfTester {
 		 */
 		public static void selfTest2() {
 			
-
-
 		for (int i = 1; i <= 5; i++) {
 			new KThread(sleepRun).setName("Sleeper "
 											+ Integer.toString(i)).fork();
-		}
+		}  //end of for loop
 		
 		KThread waker1 = new KThread(wakeRun);
 		waker1.setName("Waker");
 		waker1.fork();
 
-
 		}  //selfTest1()
 		
+		/**
+		 * Function for a sleeping thread runnable object.
+		 */
 		static void sleepFunction() {
 			Lib.debug(dbgThread, "\n Thread " + KThread.currentThread().getName() 
 					  + " is about to wake all and sleep on Condition2 \n");
@@ -65,6 +61,9 @@ public class Condition2SelfTester {
 				
 			}  //sleepFunction()
 		
+		/**
+		 * Function for a waking thread runnable object.
+		 */
 		static void wakeFunction() {
 			Lib.debug(dbgThread, "\n Thread " + KThread.currentThread().getName() 
 					  + " is about to wake one Condition2 thread \n");
@@ -86,7 +85,7 @@ public class Condition2SelfTester {
 						  + " was woken by another thread \n");
 			}
 			
-			Lib.debug(dbgThread, "\n All sleepers are done so thread " 
+			Lib.debug(dbgThread, " All sleepers are done so thread " 
 					  + KThread.currentThread().getName() 
 					  + " is about to finish \n");
 			
@@ -94,13 +93,10 @@ public class Condition2SelfTester {
 			KThread.finish();
 				
 			
-			
-			  
-				
 			}  //wakeFunction()
 		
 		/**
-		 * Wraps sleepRun inside a Runnable object so threads can be
+		 * Wraps sleepFunction inside a Runnable object so threads can be
 		 * generated for testing.
 		 */
 		private static Runnable sleepRun = new Runnable() {
@@ -110,7 +106,7 @@ public class Condition2SelfTester {
 		};  //runnable sleepRun
 		
 		/**
-		 * Wraps wakeRun inside a Runnable object so threads can be
+		 * Wraps wakeFunction inside a Runnable object so threads can be
 		 * generated for testing.
 		 */
 		private static Runnable wakeRun = new Runnable() {
@@ -129,6 +125,7 @@ public class Condition2SelfTester {
 		//condition variable for listeners
 		private static Condition2 cond_2 = new Condition2 (lock);
 		
+		//tracking sleeping threads that are not yet done waking
 		private static int sleepers_not_done = 0;
 }  //class Cond2SelfTester
 
