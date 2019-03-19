@@ -3,7 +3,6 @@ package nachos.threads;
 import nachos.machine.*;
 
 /**
- * [TODO] !!!!CHANGE Condition VARIABLES TO Condition2 VARIABLES!!!!
  * 
  * A <i>communicator</i> allows threads to synchronously exchange 32-bit
  * messages. Multiple threads can be waiting to <i>speak</i>,
@@ -104,8 +103,8 @@ public class Communicator {
 	private Lock lock = new Lock();
 	
 	//condition variable for listeners
-	private Condition listener = new Condition (lock);
+	private Condition2 listener = new Condition2 (lock);
 	
 	////condition variable for speakers
-	private Condition speaker = new Condition (lock);
+	private Condition2 speaker = new Condition2 (lock);
 }

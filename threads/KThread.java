@@ -95,6 +95,14 @@ public class KThread {
 	return this;
     }
 
+    public long getWakeTime() {
+    return wakeTime;
+     }
+    
+    public void setWakeTime(long wakeTime) {
+    this.wakeTime = wakeTime;
+    }
+    
     /**
      * Get the name of this thread. This name is used for debugging purposes
      * only.
@@ -450,4 +458,7 @@ public class KThread {
     private static KThread currentThread = null;
     private static KThread toBeDestroyed = null;
     private static KThread idleThread = null;
+    
+    //Task III: to make alarm work, add a wakeTime to all KThreads
+    private long wakeTime = -1;
 }
