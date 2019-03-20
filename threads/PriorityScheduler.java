@@ -130,7 +130,7 @@ public class PriorityScheduler extends Scheduler {
 		PriorityQueue(boolean transferPriority) {
 			this.transferPriority = transferPriority;
 			this.treeSetQueue = new TreeSet<ThreadState>(new ThreadStateComparator());
-			this.owner = null;
+			this.owner = null;  //owner only set upon acquire
 		}
 
 		public void waitForAccess(KThread thread) {
@@ -146,14 +146,17 @@ public class PriorityScheduler extends Scheduler {
 		public KThread nextThread() {
 			Lib.assertTrue(Machine.interrupt().disabled());
 			
-			if (treeSetQueue.isEmpty()) {// Check if the wait queue is empty. If so, return NULL
+			// Check if the wait queue is empty. If so, return NULL
+			if (treeSetQueue.isEmpty()) {
 				owner = null;
 				return null;
 			}  
 			
 			ThreadState next_thread_state = treeSetQueue.pollLast();
 			next_thread_state.acquire(this);
-			return next_thread_state.thread;  // Pops the thread with the highest effective priority that has been waiting the longest
+			// Pops the thread with the highest effective priority that has been 
+			// waiting the longest
+			return next_thread_state.thread;  
 		}
 
 		/**
@@ -164,8 +167,11 @@ public class PriorityScheduler extends Scheduler {
 		 *		return.
 		 */
 		protected ThreadState pickNextThread() {
-			if (treeSetQueue.isEmpty()) return null;  // Check if the wait queue is empty. If so, return NULL
-			return treeSetQueue.last();  // Return the thread that is next to run without popping it from the queue
+			// Check if the wait queue is empty. If so, return NULL
+			if (treeSetQueue.isEmpty()) return null;
+			
+			// Return the thread that is next to run without popping it
+			return treeSetQueue.last();  
 		}
 
 		public void print() {
@@ -181,7 +187,7 @@ public class PriorityScheduler extends Scheduler {
 		 */
 		public boolean transferPriority;
 		public TreeSet<ThreadState> treeSetQueue;
-		public ThreadState owner;
+		public ThreadState owner;  //last thread that acquired the queue
 	}
 
 	/**
@@ -224,19 +230,38 @@ public class PriorityScheduler extends Scheduler {
 		}
 		
 		/**
+		 * Recursively updates the effective priority of a ThreadState for its
+		 * own priority and for any of the resource owners for resources it is
+		 * currently waiting on. Only updates if it should be updated.
+		 *
+		 * @param	newEffectivePriority	the new potential priority.
 		 */
 		public void updateEffectivePriority(int newEffectivePriority) {
+			//if the newEffectivePriority is greater than our current ePriority
 			if (this.effectivePriority < newEffectivePriority) {
+				
+				//set our effectivePriority to the newEffectivePriority
 				this.effectivePriority = newEffectivePriority;
+				
+				//for each resource we are waiting on
 				for (int i = 0; i < queuesWaitingIn.size(); i++) {
+					//remove ourselves from their queue
 					queuesWaitingIn.get(i).treeSetQueue.remove(this);
+					//readd ourselves to their queue with new priority
 					queuesWaitingIn.get(i).treeSetQueue.add(this);
-					if (queuesWaitingIn.get(i).transferPriority && queuesWaitingIn.get(i).owner != null) {
+					
+					//if transferPriority on and the resource has a holder
+					if (queuesWaitingIn.get(i).transferPriority 
+					    && queuesWaitingIn.get(i).owner != null) {
+						
+						//see if owner needs to update its priority
 						queuesWaitingIn.get(i).owner.updateEffectivePriority(newEffectivePriority);
-					}
-				} //end of for
-			} //end of if
-		}
+					}  //after if, owner has done its own recursive calls
+					
+				} //after for loop, we've updated in all queues
+				
+			} //bypass everything if the newEffectivePriority is lower
+		}  //updateEffectivePriority()
 		
 		/**
 		 * Return the timestamp of the associated thread.
@@ -282,12 +307,21 @@ public class PriorityScheduler extends Scheduler {
 		 * @see	nachos.threads.ThreadQueue#waitForAccess
 		 */
 		public void waitForAccess(PriorityQueue waitQueue) {
-			this.markTimestamp();  // Mark the thread with the current machine time so we know how long they have been waiting
+			// Mark the thread with the current machine time so 
+			// we know how long they have been waiting
+			this.markTimestamp();  
+			
+			//if this is a queue with transfer priority and if there is an owner
 			if (waitQueue.transferPriority && waitQueue.owner != null) {
+				//donate priority
 				waitQueue.owner.updateEffectivePriority(this.effectivePriority);	
-			}
+			} // after if statement, all recursive calls complete
+			
+			//add to this to the list of queues we are waiting in
 			queuesWaitingIn.add(waitQueue);
-			waitQueue.treeSetQueue.add(this);  // Add the thread to the TreeSet wait queue
+			
+			// Add the thread to the TreeSet wait queue
+			waitQueue.treeSetQueue.add(this);  
 		}
 
 		/**
@@ -302,7 +336,7 @@ public class PriorityScheduler extends Scheduler {
 		 */
 		public void acquire(PriorityQueue waitQueue) {
 			queuesWaitingIn.remove(waitQueue);
-			waitQueue.owner = this;
+			waitQueue.owner = this;  //this ThreadState is now the owner
 		}	
 
 		/** The thread with which this object is associated. */	   
@@ -323,24 +357,24 @@ public class PriorityScheduler extends Scheduler {
 			int threadA_EffPrio = threadA.effectivePriority;
 			int threadB_EffPrio = threadB.effectivePriority;
 			
-			if (threadA_EffPrio < threadB_EffPrio) {  // Thread A has lower effective priority
-				return -1;
+			if (threadA_EffPrio < threadB_EffPrio) {  
+				return -1;  // Thread A has lower effective priority
 			}
-			else if (threadA_EffPrio > threadB_EffPrio) {  // Thread A has higher effective priority
-				return 1;
+			else if (threadA_EffPrio > threadB_EffPrio) {  
+				return 1;// Thread A has higher effective priority
 			}
-			else if (threadA.getTimestamp() < threadB.getTimestamp()) {  // Thread A has a smaller timestamp and therefore has been waiting longer.
-				return 1;
+			else if (threadA.getTimestamp() < threadB.getTimestamp()) {  
+				return 1; // Thread A has been waiting longer.
 			}
-			else {  // Thread B has a smaller timestamp and therefore has been waiting longer.
-				return -1;
+			else {  
+				return -1; // Thread B has been waiting longer.
 			}
-		}
+		}  //compare()
 		
-	}
+	}  //class ThreadStateComparator
 	
 	
-}
+}  //class PriorityScheduler
 
 
 /* 
