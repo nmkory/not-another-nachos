@@ -1,12 +1,11 @@
 package nachos.threads;
 
 import nachos.machine.*;
-import nachos.threads.PriorityScheduler.ThreadState;
 
 import java.util.Comparator;
 import java.util.TreeSet;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 
 /**
  * A scheduler that chooses threads based on their priorities.
@@ -201,6 +200,7 @@ public class PriorityScheduler extends Scheduler {
 		 */
 		public ThreadState(KThread thread) {
 			this.thread = thread;
+			this.queuesWaitingIn = new LinkedList <PriorityQueue> ();
 
 			setPriority(priorityDefault);
 		}
@@ -221,6 +221,21 @@ public class PriorityScheduler extends Scheduler {
 		 */
 		public int getEffectivePriority() {
 			return effectivePriority;
+		}
+		
+		/**
+		 */
+		public void updateEffectivePriority(int newEffectivePriority) {
+			if (this.effectivePriority < newEffectivePriority) {
+				this.effectivePriority = newEffectivePriority;
+				for (int i = 0; i < queuesWaitingIn.size(); i++) {
+					queuesWaitingIn.get(i).treeSetQueue.remove(this);
+					queuesWaitingIn.get(i).treeSetQueue.add(this);
+					if (queuesWaitingIn.get(i).transferPriority && queuesWaitingIn.get(i).owner != null) {
+						queuesWaitingIn.get(i).owner.updateEffectivePriority(newEffectivePriority);
+					}
+				} //end of for
+			} //end of if
 		}
 		
 		/**
@@ -269,11 +284,9 @@ public class PriorityScheduler extends Scheduler {
 		public void waitForAccess(PriorityQueue waitQueue) {
 			this.markTimestamp();  // Mark the thread with the current machine time so we know how long they have been waiting
 			if (waitQueue.transferPriority && waitQueue.owner != null) {
-				if (this.effectivePriority > waitQueue.owner.effectivePriority) {
-					waitQueue.owner.effectivePriority = this.effectivePriority;
-				}
+				waitQueue.owner.updateEffectivePriority(this.effectivePriority);	
 			}
-			
+			queuesWaitingIn.add(waitQueue);
 			waitQueue.treeSetQueue.add(this);  // Add the thread to the TreeSet wait queue
 		}
 
@@ -288,6 +301,7 @@ public class PriorityScheduler extends Scheduler {
 		 * @see	nachos.threads.ThreadQueue#nextThread
 		 */
 		public void acquire(PriorityQueue waitQueue) {
+			queuesWaitingIn.remove(waitQueue);
 			waitQueue.owner = this;
 		}	
 
@@ -299,6 +313,8 @@ public class PriorityScheduler extends Scheduler {
 		protected int effectivePriority;
 		/** The timestamp of the associated thread. */
 		protected long timestamp;
+		/** List of queues we have acquired. */
+		protected LinkedList <PriorityQueue> queuesWaitingIn;
 	}
 	
 	protected class ThreadStateComparator implements Comparator<ThreadState> {
