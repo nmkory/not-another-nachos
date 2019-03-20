@@ -1,6 +1,7 @@
 package nachos.threads;
 
 import nachos.machine.*;
+import nachos.threads.PriorityScheduler.ThreadState;
 
 import java.util.Comparator;
 import java.util.TreeSet;
@@ -130,6 +131,7 @@ public class PriorityScheduler extends Scheduler {
 		PriorityQueue(boolean transferPriority) {
 			this.transferPriority = transferPriority;
 			this.treeSetQueue = new TreeSet<ThreadState>(new ThreadStateComparator());
+			this.owner = null;
 		}
 
 		public void waitForAccess(KThread thread) {
@@ -145,8 +147,14 @@ public class PriorityScheduler extends Scheduler {
 		public KThread nextThread() {
 			Lib.assertTrue(Machine.interrupt().disabled());
 			
-			if (treeSetQueue.isEmpty()) return null;  // Check if the wait queue is empty. If so, return NULL
-			return treeSetQueue.pollLast().thread;  // Pops the thread with the highest effective priority that has been waiting the longest
+			if (treeSetQueue.isEmpty()) {// Check if the wait queue is empty. If so, return NULL
+				owner = null;
+				return null;
+			}  
+			
+			ThreadState next_thread_state = treeSetQueue.pollLast();
+			next_thread_state.acquire(this);
+			return next_thread_state.thread;  // Pops the thread with the highest effective priority that has been waiting the longest
 		}
 
 		/**
@@ -164,7 +172,7 @@ public class PriorityScheduler extends Scheduler {
 		public void print() {
 			Lib.assertTrue(Machine.interrupt().disabled());
 			// implement me (if you want)
-			for (Iterator i=treeSetQueue.iterator(); i.hasNext(); )
+			for (Iterator<ThreadState> i=treeSetQueue.iterator(); i.hasNext(); )
 				System.out.print((ThreadState) i.next() + " ");
 		}
 
@@ -174,6 +182,7 @@ public class PriorityScheduler extends Scheduler {
 		 */
 		public boolean transferPriority;
 		public TreeSet<ThreadState> treeSetQueue;
+		public ThreadState owner;
 	}
 
 	/**
@@ -259,6 +268,12 @@ public class PriorityScheduler extends Scheduler {
 		 */
 		public void waitForAccess(PriorityQueue waitQueue) {
 			this.markTimestamp();  // Mark the thread with the current machine time so we know how long they have been waiting
+			if (waitQueue.transferPriority && waitQueue.owner != null) {
+				if (this.effectivePriority > waitQueue.owner.effectivePriority) {
+					waitQueue.owner.effectivePriority = this.effectivePriority;
+				}
+			}
+			
 			waitQueue.treeSetQueue.add(this);  // Add the thread to the TreeSet wait queue
 		}
 
@@ -273,7 +288,7 @@ public class PriorityScheduler extends Scheduler {
 		 * @see	nachos.threads.ThreadQueue#nextThread
 		 */
 		public void acquire(PriorityQueue waitQueue) {
-			Lib.assertTrue(waitQueue.treeSetQueue.isEmpty());  // Assert that no other thread is waiting for access
+			waitQueue.owner = this;
 		}	
 
 		/** The thread with which this object is associated. */	   
@@ -289,8 +304,8 @@ public class PriorityScheduler extends Scheduler {
 	protected class ThreadStateComparator implements Comparator<ThreadState> {
 		
 		public int compare(ThreadState threadA, ThreadState threadB) {
-			int threadA_EffPrio = threadA.getEffectivePriority();
-			int threadB_EffPrio = threadB.getEffectivePriority();
+			int threadA_EffPrio = threadA.effectivePriority;
+			int threadB_EffPrio = threadB.effectivePriority;
 			
 			if (threadA_EffPrio < threadB_EffPrio) {  // Thread A has lower effective priority
 				return -1;
