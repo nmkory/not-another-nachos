@@ -99,6 +99,10 @@ public class KThread {
     return wakeTime;
      }
     
+    public int getID() {
+        return id;
+         }
+    
     public void setWakeTime(long wakeTime) {
     this.wakeTime = wakeTime;
     }
