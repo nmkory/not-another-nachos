@@ -152,7 +152,14 @@ public class PriorityScheduler extends Scheduler {
 				return null;
 			}  
 			
+			Lib.debug(dbgThread, "Before Popping: ");
+			this.print();
+			
 			ThreadState next_thread_state = treeSetQueue.pollLast();
+			
+			Lib.debug(dbgThread, "After Popping: ");
+			this.print();  // Print the result of popping the queue
+			
 			next_thread_state.acquire(this);
 			// Pops the thread with the highest effective priority that has been 
 			// waiting the longest
@@ -177,8 +184,10 @@ public class PriorityScheduler extends Scheduler {
 		public void print() {
 			Lib.assertTrue(Machine.interrupt().disabled());
 			// implement me (if you want)
+			Lib.debug(dbgThread, "--- Current queue line up (lowest to highest): ");
 			for (Iterator<ThreadState> i=treeSetQueue.iterator(); i.hasNext(); )
-				System.out.print((ThreadState) i.next() + " ");
+				Lib.debug(dbgThread, ((ThreadState) i.next()).thread + " ");
+			Lib.debug(dbgThread, "\n");
 		}
 
 		/**
@@ -321,7 +330,13 @@ public class PriorityScheduler extends Scheduler {
 			queuesWaitingIn.add(waitQueue);
 			
 			// Add the thread to the TreeSet wait queue
-			waitQueue.treeSetQueue.add(this);  
+			Lib.debug(dbgThread, "Before Adding: ");
+			waitQueue.print();
+			
+			waitQueue.treeSetQueue.add(this);
+			
+			Lib.debug(dbgThread, "After Adding: ");
+			waitQueue.print();  // Print the result of pushing into the queue
 		}
 
 		/**
@@ -366,14 +381,17 @@ public class PriorityScheduler extends Scheduler {
 			else if (threadA.getTimestamp() < threadB.getTimestamp()) {  
 				return 1; // Thread A has been waiting longer.
 			}
-			else {  
-				return -1; // Thread B has been waiting longer.
+			else if (threadA.getTimestamp() > threadB.getTimestamp()) {
+				return -1;
+			}
+			else {
+				return 0;
 			}
 		}  //compare()
 		
 	}  //class ThreadStateComparator
 	
-	
+	private static final char dbgThread = 't';
 }  //class PriorityScheduler
 
 
