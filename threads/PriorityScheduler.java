@@ -249,13 +249,16 @@ public class PriorityScheduler extends Scheduler {
 			//if the newEffectivePriority is greater than our current ePriority
 			if (this.effectivePriority < newEffectivePriority) {
 				
+				for (int i = 0; i < queuesWaitingIn.size(); i++) {
+					//remove ourselves from their queue
+					queuesWaitingIn.get(i).treeSetQueue.remove(this);
+				}  //after for loop we've removed ourselves from all waitQueues
+				
 				//set our effectivePriority to the newEffectivePriority
 				this.effectivePriority = newEffectivePriority;
 				
 				//for each resource we are waiting on
 				for (int i = 0; i < queuesWaitingIn.size(); i++) {
-					//remove ourselves from their queue
-					queuesWaitingIn.get(i).treeSetQueue.remove(this);
 					//readd ourselves to their queue with new priority
 					queuesWaitingIn.get(i).treeSetQueue.add(this);
 					
@@ -384,6 +387,13 @@ public class PriorityScheduler extends Scheduler {
 			else if (threadA.getTimestamp() > threadB.getTimestamp()) {
 				return -1;
 			}
+			else if (threadA.thread.getID() < threadB.thread.getID()) {  
+				return 1; // Thread A has been waiting longer.
+			}
+			else if (threadA.thread.getID() > threadB.thread.getID()) {
+				return -1;
+			}
+			
 			else {
 				return 0;
 			}
