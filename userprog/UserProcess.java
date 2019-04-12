@@ -329,12 +329,92 @@ public class UserProcess {
 	 * Handle the halt() system call.
 	 */
 	private int handleHalt() {
-
 		Machine.halt();
 
 		Lib.assertNotReached("Machine.halt() did not halt machine!");
 		return 0;
 	}
+	
+	// int myAddr is real argument.
+	private int handleCreate(String fName) {
+//		if (myAddr < 0)
+//			return -1;
+		
+		//String fName = readVirtualMemoryString(myAddr, 1024);
+		
+		OpenFile tempFile = ThreadedKernel.fileSystem.open(fName, false);
+		
+		// Check if file is made.
+		if (tempFile != null) {
+			tempFile.close();
+			return -1;
+		}
+		
+		// Add file if there is space to add the file
+		for (int i = 0; i < 8; i++) {
+			if (myFileSlots[i] == null) {
+				myFileSlots[i] = ThreadedKernel.fileSystem.open(fName, true);
+				Lib.debug(dbgProcess, "Created " + myFileSlots[i].getName());
+				if (myFileSlots[i] != null)
+					return i;
+				else
+					return -1;
+			}
+		}
+		
+		return -1;
+		
+	}  //handleCreate()
+	
+	/**
+	 * Handle the open() system call.
+	 */
+	private int handleOpen(String myAddr) {
+		Machine.halt();
+
+		Lib.assertNotReached("Machine.halt() did not halt machine!");
+		return 0;
+	}  //handleOpen()
+	
+	
+	
+	private int handleRead(int slotNum, int bufferAddr, int numBytes) {
+		Machine.halt();
+
+		Lib.assertNotReached("Machine.halt() did not halt machine!");
+		return 0;
+	}  //handleRead()
+	
+	
+	private int handleWrite(int slotNum, int bufferAddr, int numBytes) {
+		Machine.halt();
+
+		Lib.assertNotReached("Machine.halt() did not halt machine!");
+		return 0;
+	}  //handleWrite()
+	
+	
+	private int handleClose(int slotNum) {
+		Machine.halt();
+
+		Lib.assertNotReached("Machine.halt() did not halt machine!");
+		return 0;
+	}  //handleClose()
+	
+	
+	private int handleUnlink(String fName) {
+//		if (myAddr < 0)
+//		return -1;
+	
+	//String fName = readVirtualMemoryString(myAddr, 1024);
+		if (ThreadedKernel.fileSystem.remove(fName))
+			return 0;
+		else
+			return -1;
+		
+	}  //handleUnlink()
+	
+
 
 	private static final int syscallHalt = 0, syscallExit = 1, syscallExec = 2, syscallJoin = 3, syscallCreate = 4,
 			syscallOpen = 5, syscallRead = 6, syscallWrite = 7, syscallClose = 8, syscallUnlink = 9;
@@ -403,7 +483,20 @@ public class UserProcess {
 	public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
 		switch (syscall) {
 		case syscallHalt:
+			handleCreate("test.txt");
 			return handleHalt();
+//		case syscallCreate:
+//			return handleCreate(a0);
+//		case syscallOpen:
+//			return handleOpen(a0);
+//		case syscallRead:
+//			return handleRead(a0, a1, a2);
+//		case syscallWrite:
+//			return handleWrite(a0, a1, a2);
+//		case syscallClose:
+//			return handleClose(a0);
+//		case syscallUnlink:
+//			return handleUnlink(a0);
 
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
@@ -437,6 +530,9 @@ public class UserProcess {
 		}
 	}
 
+	// My File Slots
+	protected OpenFile[] myFileSlots = new OpenFile[8];
+	
 	/** The program being run by this process. */
 	protected Coff coff;
 
