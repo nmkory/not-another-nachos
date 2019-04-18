@@ -340,7 +340,7 @@ public class UserProcess {
 //		if (myAddr < 0)
 //			return -1;
 		
-		//String fName = readVirtualMemoryString(myAddr, 1024);
+		//String fName = readVirtualMemoryString(myAddr, 256);
 		
 		OpenFile tempFile = ThreadedKernel.fileSystem.open(fName, false);
 		
@@ -351,7 +351,7 @@ public class UserProcess {
 		}
 		
 		// Add file if there is space to add the file
-		for (int i = 0; i < 8; i++) {
+		for (int i = 0; i < 16; i++) {
 			if (myFileSlots[i] == null) {
 				myFileSlots[i] = ThreadedKernel.fileSystem.open(fName, true);
 				Lib.debug(dbgProcess, "Created " + myFileSlots[i].getName());
@@ -531,7 +531,7 @@ public class UserProcess {
 	}
 
 	// My File Slots
-	protected OpenFile[] myFileSlots = new OpenFile[8];
+	protected OpenFile[] myFileSlots = new OpenFile[16];
 	
 	/** The program being run by this process. */
 	protected Coff coff;
