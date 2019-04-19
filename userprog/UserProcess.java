@@ -381,17 +381,19 @@ public class UserProcess {
 		String fName = readVirtualMemoryString(myAddr, 256);
 		
 		OpenFile tempFile = ThreadedKernel.fileSystem.open(fName, false);
+		tempFile = ThreadedKernel.fileSystem.open(fName, false);
 		
 		// Check if file is not made.
 		if (tempFile == null) {
+			System.out.println("Opened twice");
 			return -1;
 		}
 		
 		// Add file if there is space to add the file
-		for (int i = 0; i < 16; i++) {
+		for (int i = 0; i <= max; i++) {
 			if (myFileSlots[i] == null) {
 				myFileSlots[i] = tempFile;
-				Lib.debug(dbgProcess, "Created " + myFileSlots[i].getName());
+				Lib.debug(dbgProcess, "Opened " + myFileSlots[i].getName());
 				if (myFileSlots[i] != null)
 					return i;
 				else
@@ -404,27 +406,66 @@ public class UserProcess {
 	}  //handleOpen()
 	
 	
-	
-	private int handleRead(int slotNum, int bufferAddr, int numBytes) {
-		Machine.halt();
+	/* On success, the number of bytes read is returned.
+	 * On error, -1 is returned.
+	 */
+	private int handleRead(int slotNum, int vaddr, int numBytes) {
+		// if the slot is empty
+		if (myFileSlots[slotNum] == null || slotNum < 0 || slotNum >= 16
+			|| vaddr <= 0 || numBytes <= 0)
+			return -1;
+		
+		byte[] dataToBeFilled = new byte[numBytes];
+		
+		int bytesReadFromFile = myFileSlots[slotNum].read(dataToBeFilled, 0, numBytes);
+		
+		//string only for testing
+		String s = new String(dataToBeFilled);
+		System.out.println(s);
 
-		Lib.assertNotReached("Machine.halt() did not halt machine!");
-		return 0;
+		int bytesWrittenToAddr = writeVirtualMemory(vaddr, dataToBeFilled);
+		//Lib.assertNotReached("Machine.halt() did not halt machine!");
+		
+		
+		
+		if (bytesReadFromFile == bytesWrittenToAddr)
+			return bytesReadFromFile;
+		else
+			return -1;
 	}  //handleRead()
 	
 	
-	private int handleWrite(int slotNum, int bufferAddr, int numBytes) {
-		Machine.halt();
-
-		Lib.assertNotReached("Machine.halt() did not halt machine!");
-		return 0;
+	private int handleWrite(int slotNum, int vaddr, int numBytes) {
+		// if the slot is empty
+		if (myFileSlots[slotNum] == null || slotNum < 0 || slotNum >= 16
+			|| vaddr <= 0 || numBytes <= 0)
+			return -1;
+		
+		byte[] dataToBeFilled = new byte[numBytes];
+		
+		int bytesReadFromAddr = readVirtualMemory(vaddr, dataToBeFilled);
+		
+		//string only for testing
+		String s = new String(dataToBeFilled);
+		System.out.println(s);
+		
+		int bytesWriteToFile = myFileSlots[slotNum].write(dataToBeFilled, 0, numBytes);
+		
+		if (bytesReadFromAddr == bytesWriteToFile)
+			return bytesReadFromAddr;
+		else
+			return -1;
 	}  //handleWrite()
 	
 	
 	private int handleClose(int slotNum) {
-		Machine.halt();
-
-		Lib.assertNotReached("Machine.halt() did not halt machine!");
+		// if the slot is empty
+		if (myFileSlots[slotNum] == null)
+			return -1;
+		
+		myFileSlots[slotNum].close();
+		myFileSlots[slotNum] = null;
+		
 		return 0;
 	}  //handleClose()
 	
@@ -438,7 +479,6 @@ public class UserProcess {
 			return 0;
 		else
 			return -1;
-		
 	}  //handleUnlink()
 	
 
@@ -512,23 +552,26 @@ public class UserProcess {
 		case syscallHalt:
 			// comment in to test in Eclipse
 			//handleCreate("test.txt");
+//			handleRead( handleOpen("test.txt"), 1, 100 );
+//			handleWrite( handleOpen("test2.txt"), 1, 100 );
+						
 			return handleHalt();
 		case syscallCreate:
 			return handleCreate(a0);
 		case syscallOpen:
 			return handleOpen(a0);
-//		case syscallRead:
-//			return handleRead(a0, a1, a2);
-//		case syscallWrite:
-//			return handleWrite(a0, a1, a2);
-//		case syscallClose:
-//			return handleClose(a0);
+		case syscallRead:
+			return handleRead(a0, a1, a2);
+		case syscallWrite:
+			return handleWrite(a0, a1, a2);
+		case syscallClose:
+			return handleClose(a0);
 		case syscallUnlink:
 			return handleUnlink(a0);
 
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
-			Lib.assertNotReached("Unknown system call!");
+			Lib.assertNotReached("Unknown system call! Syscall: " + syscall);
 		}
 		return 0;
 	}
