@@ -395,9 +395,11 @@ public class UserProcess {
 				if (myFileSlots[i] != null)
 					return i;
 				else
+					tempFile.close();
 					return -1;
 			}
 		}
+		tempFile.close();
 		return -1;
 	}  //handleOpen()
 	
@@ -427,11 +429,11 @@ public class UserProcess {
 	}  //handleClose()
 	
 	
-	private int handleUnlink(String fName) {
-//		if (myAddr < 0)
-//		return -1;
+	private int handleUnlink(int myAddr) {
+		if (myAddr < 0)
+			return -1;
 	
-	//String fName = readVirtualMemoryString(myAddr, 1024);
+		String fName = readVirtualMemoryString(myAddr, 256);
 		if (ThreadedKernel.fileSystem.remove(fName))
 			return 0;
 		else
@@ -521,8 +523,8 @@ public class UserProcess {
 //			return handleWrite(a0, a1, a2);
 //		case syscallClose:
 //			return handleClose(a0);
-//		case syscallUnlink:
-//			return handleUnlink(a0);
+		case syscallUnlink:
+			return handleUnlink(a0);
 
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
