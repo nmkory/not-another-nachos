@@ -336,11 +336,14 @@ public class UserProcess {
 	}
 	
 	// int myAddr is real argument.
-	private int handleCreate(String fName) {
-//		if (myAddr < 0)
-//			return -1;
+	// pass in String fName to test in Eclipse
+	private int handleCreate(int myAddr) {
+		// comment out to test in Eclipse
+		if (myAddr < 0)
+			return -1;
 		
-		//String fName = readVirtualMemoryString(myAddr, 256);
+		// comment out to test in Eclipse
+		String fName = readVirtualMemoryString(myAddr, 256);
 		
 		OpenFile tempFile = ThreadedKernel.fileSystem.open(fName, false);
 		
@@ -361,9 +364,7 @@ public class UserProcess {
 					return -1;
 			}
 		}
-		
-		return -1;
-		
+		return -1;		
 	}  //handleCreate()
 	
 	/**
@@ -483,10 +484,10 @@ public class UserProcess {
 	public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
 		switch (syscall) {
 		case syscallHalt:
-			handleCreate("test.txt");
+			//handleCreate("test.txt");
 			return handleHalt();
-//		case syscallCreate:
-//			return handleCreate(a0);
+		case syscallCreate:
+			return handleCreate(a0);
 //		case syscallOpen:
 //			return handleOpen(a0);
 //		case syscallRead:
