@@ -369,12 +369,36 @@ public class UserProcess {
 	
 	/**
 	 * Handle the open() system call.
+	 * int myAddr is real argument.
+	 * pass in String fName to test in Eclipse
 	 */
-	private int handleOpen(String myAddr) {
-		Machine.halt();
-
-		Lib.assertNotReached("Machine.halt() did not halt machine!");
-		return 0;
+	private int handleOpen(int myAddr) {
+		// comment out to test in Eclipse
+		if (myAddr < 0)
+			return -1;
+		
+		// comment out to test in Eclipse
+		String fName = readVirtualMemoryString(myAddr, 256);
+		
+		OpenFile tempFile = ThreadedKernel.fileSystem.open(fName, false);
+		
+		// Check if file is not made.
+		if (tempFile == null) {
+			return -1;
+		}
+		
+		// Add file if there is space to add the file
+		for (int i = 0; i < 16; i++) {
+			if (myFileSlots[i] == null) {
+				myFileSlots[i] = tempFile;
+				Lib.debug(dbgProcess, "Created " + myFileSlots[i].getName());
+				if (myFileSlots[i] != null)
+					return i;
+				else
+					return -1;
+			}
+		}
+		return -1;
 	}  //handleOpen()
 	
 	
@@ -484,12 +508,13 @@ public class UserProcess {
 	public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
 		switch (syscall) {
 		case syscallHalt:
+			// comment in to test in Eclipse
 			//handleCreate("test.txt");
 			return handleHalt();
 		case syscallCreate:
 			return handleCreate(a0);
-//		case syscallOpen:
-//			return handleOpen(a0);
+		case syscallOpen:
+			return handleOpen(a0);
 //		case syscallRead:
 //			return handleRead(a0, a1, a2);
 //		case syscallWrite:
