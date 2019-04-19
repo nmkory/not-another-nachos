@@ -27,6 +27,12 @@ public class UserProcess {
 		pageTable = new TranslationEntry[numPhysPages];
 		for (int i = 0; i < numPhysPages; i++)
 			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+		
+		
+		// Initialize stdin/stdout OpenFiles
+		myFileSlots[0] = UserKernel.console.openForReading();
+		myFileSlots[1] = UserKernel.console.openForWriting();
+		
 	}
 
 	/**
@@ -373,7 +379,7 @@ public class UserProcess {
 	 * pass in String fName to test in Eclipse
 	 */
 	private int handleOpen(int myAddr) {
-		// comment out to test in Eclipse
+//		// comment out to test in Eclipse
 		if (myAddr < 0)
 			return -1;
 		
@@ -381,16 +387,14 @@ public class UserProcess {
 		String fName = readVirtualMemoryString(myAddr, 256);
 		
 		OpenFile tempFile = ThreadedKernel.fileSystem.open(fName, false);
-		tempFile = ThreadedKernel.fileSystem.open(fName, false);
 		
 		// Check if file is not made.
 		if (tempFile == null) {
-			System.out.println("Opened twice");
 			return -1;
 		}
 		
 		// Add file if there is space to add the file
-		for (int i = 0; i <= max; i++) {
+		for (int i = 0; i < 16; i++) {
 			if (myFileSlots[i] == null) {
 				myFileSlots[i] = tempFile;
 				Lib.debug(dbgProcess, "Opened " + myFileSlots[i].getName());
@@ -460,7 +464,7 @@ public class UserProcess {
 	
 	private int handleClose(int slotNum) {
 		// if the slot is empty
-		if (myFileSlots[slotNum] == null)
+		if (myFileSlots[slotNum] == null || slotNum <= 1)
 			return -1;
 		
 		myFileSlots[slotNum].close();
@@ -552,9 +556,9 @@ public class UserProcess {
 		case syscallHalt:
 			// comment in to test in Eclipse
 			//handleCreate("test.txt");
-//			handleRead( handleOpen("test.txt"), 1, 100 );
-//			handleWrite( handleOpen("test2.txt"), 1, 100 );
-						
+			//handleRead( handleOpen("test.txt"), 1, 100 );
+			//handleWrite( handleOpen("test2.txt"), 1, 100 );
+			
 			return handleHalt();
 		case syscallCreate:
 			return handleCreate(a0);
