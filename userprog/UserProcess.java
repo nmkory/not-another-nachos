@@ -347,7 +347,13 @@ public class UserProcess {
 	
 	
 	/**
-	 * Handle the exit() system call.
+	 * <tt>Project 2 Task 3</tt> Terminate the current process immediately. 
+	 * Any open file descriptors belonging to the process are closed. Any 
+	 * children of the process no longer have a parent process.
+	 *
+	 * @param status is returned to the parent process as this process's exit 
+	 * status and can be collected using the join syscall.
+	 * @return exit() never returns.
 	 */
 	private int handleExit(int status) {
 		
@@ -356,7 +362,18 @@ public class UserProcess {
 	
 	
 	/**
-	 * Handle the exec() system call.
+	 * <tt>Project 2 Task 3</tt> Execute the program stored in the specified 
+	 * file, with the specified arguments, in a new child process. The child 
+	 * process has a new unique process ID, and starts with stdin opened as file
+	 * descriptor 0, and stdout opened as file descriptor 1.
+	 *
+	 * @param fileName the name of the file containing the executable. Note that
+	 * this string must include the ".coff" extension.
+	 * @param numArgs the number of arguments to pass to the child process.
+	 * @param aryArgs array of pointers to null-terminated strings that 
+	 * represent the arguments to pass to the child process.
+	 * @return exec() returns the child process's process ID, which can be 
+	 * passed to join(). On error, returns -1.
 	 */
 	private int handleExec(int fileName, int numArgs, int aryArgs) {
 		
@@ -365,7 +382,19 @@ public class UserProcess {
 	
 	
 	/**
-	 * Handle the join() system call.
+	 * <tt>Project 2 Task 3</tt> Suspend execution of the current process until 
+	 * the child process specified by the processID argument has exited. If the 
+	 * child has already exited by the time of the call, returns immediately. 
+	 * When the current process resumes, it disowns the child process, so that 
+	 * join() cannot be used on that process again.
+	 *
+	 * @param processID is the process ID of the child process, returned by
+	 * exec().
+	 * @param status points to an integer where the exit status of the child 
+	 * process will be stored.
+	 * @return If the child exited normally, returns 1. If the child exited as a
+	 * result of an unhandled exception, returns 0. If processID does not refer
+	 * to a child process of the current process, returns -1.
 	 */
 	private int handleJoin(int processID, int exitStatus) {
 		
