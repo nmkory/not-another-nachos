@@ -621,6 +621,8 @@ public class UserProcess {
 			//handleRead( handleOpen("test.txt"), 1, 100 );
 			//handleWrite( handleOpen("test2.txt"), 1, 100 );
 			
+			// Set Kernel.shellProgram = testTask1.coff to run Task 1 tests.
+			
 			return handleHalt();
 		case syscallCreate:
 			return handleCreate(a0);
