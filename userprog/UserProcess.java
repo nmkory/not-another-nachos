@@ -7,6 +7,7 @@ import nachos.userprog.*;
 import java.io.EOFException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -41,6 +42,7 @@ public class UserProcess {
 		
 		// Project 2 Task 3: Initialize counters and children
 		children = new ArrayList<UserProcess>();
+		childrenStatus = new HashMap<>();
 		processID = processIDCounter;
 		processIDCounter++;
 		
@@ -364,6 +366,23 @@ public class UserProcess {
 	 * @return exit() never returns.
 	 */
 	private int handleExit(int status) {
+		for (int i = 0; i < 16; i++) {
+			if (myFileSlots[i] != null) {
+				myFileSlots[i].close();
+				myFileSlots[i] = null;
+			}
+		}
+		
+		for (int i = 0; i < children.size(); i++) {
+			children.get(i).parent = null;
+		}
+		
+		parent.childrenStatus.replace(processID, status);
+		
+		if (processID != 0)
+			UThread.finish();
+		else
+			Kernel.kernel.terminate();
 		
 		return 0;		
 	}  //handleExit()
@@ -404,11 +423,12 @@ public class UserProcess {
 		}
 		
 		UserProcess process = UserProcess.newUserProcess();
-
-		process.execute(fName, myArgs);	
+	
 		process.parent = this;
 		children.add(process);
+		childrenStatus.put(process.processID, 1);
 		
+		process.execute(fName, myArgs);
 		return process.processID;	
 	}  //handleExec()
 	
@@ -798,8 +818,11 @@ public class UserProcess {
 	// Project 2 Task 3: parent of this process
 	protected UserProcess parent;
 	
-	// Project 2 Task 3: parent of this process
+	// Project 2 Task 3: children of this process
 	protected ArrayList<UserProcess> children;
+	
+	// Project 2 Task 3: children statuses of this process
+	protected HashMap<Integer, Integer> childrenStatus;
 	
 	/** The program being run by this process. */
 	protected Coff coff;
