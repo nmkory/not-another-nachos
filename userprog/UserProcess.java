@@ -5,6 +5,8 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.io.EOFException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -37,6 +39,11 @@ public class UserProcess {
 		// File descriptor 1 refers to display output (UNIX stdout)
 		myFileSlots[1] = UserKernel.console.openForWriting();
 		
+		// Project 2 Task 3: Initialize counters and children
+		children = new ArrayList<UserProcess>();
+		processID = processIDCounter;
+		processIDCounter++;
+		
 	}
 
 	/**
@@ -58,6 +65,7 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the program was successfully executed.
 	 */
 	public boolean execute(String name, String[] args) {
+		System.out.println("Process ID " + processID + " is executing " + name);
 		if (!load(name, args))
 			return false;
 
@@ -375,9 +383,33 @@ public class UserProcess {
 	 * @return exec() returns the child process's process ID, which can be 
 	 * passed to join(). On error, returns -1.
 	 */
-	private int handleExec(int fileName, int numArgs, int aryArgs) {
+	private int handleExec(int fileName, int numArgs, int addressOfAddresses) {
+		byte[] tempAddress = new byte[4];
+		int argAddress;
+		ByteBuffer buf;
+		String fName = readVirtualMemoryString(fileName, 256);
 		
-		return 0;		
+		String[] myArgs = new String[numArgs];
+		
+		for (int i = 0; i < numArgs; i++) {
+			readVirtualMemory(addressOfAddresses, tempAddress);
+			buf = ByteBuffer.wrap(tempAddress);
+			argAddress = buf.getInt();
+			myArgs[i] = readVirtualMemoryString(argAddress, 256);
+			addressOfAddresses += 4;
+		}
+		
+		for (int i = 0; i < numArgs; i++) {
+			System.out.println(myArgs[i]);
+		}
+		
+		UserProcess process = UserProcess.newUserProcess();
+
+		process.execute(fName, myArgs);	
+		process.parent = this;
+		children.add(process);
+		
+		return process.processID;	
 	}  //handleExec()
 	
 	
@@ -678,7 +710,29 @@ public class UserProcess {
 			//handleRead( handleOpen("test.txt"), 1, 100 );
 			//handleWrite( handleOpen("test2.txt"), 1, 100 );
 			
-			// Set Kernel.shellProgram = testTask1.coff to run Task 1 tests.
+			// Set Kernel.shellProgram = testTask1.coff to run Task 1 and 3 tests.
+			String name = "hi\0";
+			byte [] fileName1 = name.getBytes();
+			writeVirtualMemory(100, fileName1);
+			
+			byte [] address1 = (ByteBuffer.allocate(4).putInt(100)).array();
+			writeVirtualMemory(4, address1);
+			
+			name = "hello\0";
+			byte [] fileName2 = name.getBytes();
+			writeVirtualMemory(150, fileName2);
+			
+			byte [] address2 = (ByteBuffer.allocate(4).putInt(150)).array();
+			writeVirtualMemory(8, address2);
+			
+			name = "world\0";
+			byte [] fileName3 = name.getBytes();
+			writeVirtualMemory(175, fileName3);
+			
+			byte [] address3 = (ByteBuffer.allocate(4).putInt(175)).array();
+			writeVirtualMemory(12, address3);
+			
+			handleExec(100, 3, 4);
 			
 			return handleHalt();
 		case syscallExit:
@@ -734,6 +788,18 @@ public class UserProcess {
 
 	// Project 2 Task 1: Array of OpenFiles for the opened files in this process
 	protected OpenFile[] myFileSlots;
+	
+	// Project 2 Task 3: processID of this process
+	protected int processID;
+	
+	// Project 2 Task 3: counter of processIDs
+	private static int processIDCounter = 0;
+	
+	// Project 2 Task 3: parent of this process
+	protected UserProcess parent;
+	
+	// Project 2 Task 3: parent of this process
+	protected ArrayList<UserProcess> children;
 	
 	/** The program being run by this process. */
 	protected Coff coff;
