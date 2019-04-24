@@ -42,7 +42,7 @@ public class UserProcess {
 		
 		// Project 2 Task 3: Initialize counters and children
 		children = new ArrayList<UserProcess>();
-		childrenStatus = new HashMap<>();
+		childrenStatus = new HashMap<Integer, Integer>();
 		processID = processIDCounter;
 		processIDCounter++;
 		
@@ -71,7 +71,8 @@ public class UserProcess {
 		if (!load(name, args))
 			return false;
 
-		new UThread(this).setName(name).fork();
+		processThread = new UThread(this);
+		processThread.setName(name).fork();
 
 		return true;
 	}
@@ -376,8 +377,8 @@ public class UserProcess {
 		for (int i = 0; i < children.size(); i++) {
 			children.get(i).parent = null;
 		}
-		
-		parent.childrenStatus.replace(processID, status);
+		System.out.println("exit status " + status);
+		parent.childrenStatus.put(processID, status);
 		
 		if (processID != 0)
 			UThread.finish();
@@ -418,9 +419,9 @@ public class UserProcess {
 			addressOfAddresses += 4;
 		}
 		
-		for (int i = 0; i < numArgs; i++) {
-			System.out.println(myArgs[i]);
-		}
+//		for (int i = 0; i < numArgs; i++) {
+//			System.out.println(myArgs[i]);
+//		}
 		
 		UserProcess process = UserProcess.newUserProcess();
 	
@@ -442,15 +443,33 @@ public class UserProcess {
 	 *
 	 * @param processID is the process ID of the child process, returned by
 	 * exec().
-	 * @param status points to an integer where the exit status of the child 
+	 * @param exitStatusAddr points to an integer where the exit status of the child 
 	 * process will be stored.
 	 * @return If the child exited normally, returns 1. If the child exited as a
 	 * result of an unhandled exception, returns 0. If processID does not refer
 	 * to a child process of the current process, returns -1.
 	 */
-	private int handleJoin(int processID, int exitStatus) {
+	private int handleJoin(int processID, int exitStatusAddr) {
+		int i;
+		int childExitStatus;
+		for (i = 0; i < children.size(); i++) {
+			if (children.get(i).processID == processID)
+				break;
+		}
+		if (i == children.size())
+		{
+			System.out.println(i);
+			return -1;
+		}
+		children.get(i).processThread.join();
 		
-		return 0;		
+		childExitStatus = childrenStatus.get(children.get(i).processID);
+		System.out.println("join exit status " + childExitStatus);
+		
+		byte [] statusByteAry = (ByteBuffer.allocate(4).putInt(childExitStatus)).array();
+		writeVirtualMemory(exitStatusAddr, statusByteAry);	
+		
+		return 1;		
 	}  //handleJoin()
 	
 	
@@ -731,28 +750,28 @@ public class UserProcess {
 			//handleWrite( handleOpen("test2.txt"), 1, 100 );
 			
 			// Set Kernel.shellProgram = testTask1.coff to run Task 1 and 3 tests.
-			String name = "hi\0";
-			byte [] fileName1 = name.getBytes();
-			writeVirtualMemory(100, fileName1);
-			
-			byte [] address1 = (ByteBuffer.allocate(4).putInt(100)).array();
-			writeVirtualMemory(4, address1);
-			
-			name = "hello\0";
-			byte [] fileName2 = name.getBytes();
-			writeVirtualMemory(150, fileName2);
-			
-			byte [] address2 = (ByteBuffer.allocate(4).putInt(150)).array();
-			writeVirtualMemory(8, address2);
-			
-			name = "world\0";
-			byte [] fileName3 = name.getBytes();
-			writeVirtualMemory(175, fileName3);
-			
-			byte [] address3 = (ByteBuffer.allocate(4).putInt(175)).array();
-			writeVirtualMemory(12, address3);
-			
-			handleExec(100, 3, 4);
+//			String name = "hi\0";
+//			byte [] fileName1 = name.getBytes();
+//			writeVirtualMemory(100, fileName1);
+//			
+//			byte [] address1 = (ByteBuffer.allocate(4).putInt(100)).array();
+//			writeVirtualMemory(4, address1);
+//			
+//			name = "hello\0";
+//			byte [] fileName2 = name.getBytes();
+//			writeVirtualMemory(150, fileName2);
+//			
+//			byte [] address2 = (ByteBuffer.allocate(4).putInt(150)).array();
+//			writeVirtualMemory(8, address2);
+//			
+//			name = "world\0";
+//			byte [] fileName3 = name.getBytes();
+//			writeVirtualMemory(175, fileName3);
+//			
+//			byte [] address3 = (ByteBuffer.allocate(4).putInt(175)).array();
+//			writeVirtualMemory(12, address3);
+//			
+//			handleExec(100, 3, 4);
 			
 			return handleHalt();
 		case syscallExit:
@@ -823,6 +842,9 @@ public class UserProcess {
 	
 	// Project 2 Task 3: children statuses of this process
 	protected HashMap<Integer, Integer> childrenStatus;
+	
+	// Project 2 Task 3: process thread
+	protected UThread processThread;
 	
 	/** The program being run by this process. */
 	protected Coff coff;
