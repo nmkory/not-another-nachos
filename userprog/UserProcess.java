@@ -345,6 +345,34 @@ public class UserProcess {
 		return 0;
 	}
 	
+	
+	/**
+	 * Handle the exit() system call.
+	 */
+	private int handleExit(int status) {
+		
+		return 0;		
+	}  //handleExit()
+	
+	
+	/**
+	 * Handle the exec() system call.
+	 */
+	private int handleExec(int fileName, int numArgs, int aryArgs) {
+		
+		return 0;		
+	}  //handleExec()
+	
+	
+	/**
+	 * Handle the join() system call.
+	 */
+	private int handleJoin(int processID, int exitStatus) {
+		
+		return 0;		
+	}  //handleJoin()
+	
+	
 	/**
 	 * <tt>Project 2 Task 1</tt> Attempt to open the named disk 
 	 * file, creating it if it does not exist, and return a file descriptor that
@@ -624,6 +652,12 @@ public class UserProcess {
 			// Set Kernel.shellProgram = testTask1.coff to run Task 1 tests.
 			
 			return handleHalt();
+		case syscallExit:
+			return handleExit(a0);
+		case syscallExec:
+			return handleExec(a0, a1, a2);
+		case syscallJoin:
+			return handleJoin(a0, a1);
 		case syscallCreate:
 			return handleCreate(a0);
 		case syscallOpen:
