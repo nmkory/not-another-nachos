@@ -83,6 +83,7 @@ public class ThreadedKernel extends Kernel {
 		// PrioSchedulerSelfTester.selfTest8();
 
 		// for loop to keep main thread alive when self testing
+		/*
 		for (int i = 0; i < 150; i++) {
 
 			// check that we're yielding main
@@ -94,7 +95,7 @@ public class ThreadedKernel extends Kernel {
 				KThread.yield();
 			} // else this is not main thread so do not yield
 		} // for loop has yielded 30 times and os will move on to finish
-
+		 */
 		if (Machine.bank() != null) {
 			ElevatorBank.selfTest();
 		}
