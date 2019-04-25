@@ -44,8 +44,7 @@ public class UserProcess {
 		children = new ArrayList<UserProcess>();
 		childrenStatus = new HashMap<Integer, Integer>();
 		processID = processIDCounter;
-		processIDCounter++;
-		
+		processIDCounter++;	
 	}
 
 	/**
@@ -67,7 +66,7 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the program was successfully executed.
 	 */
 	public boolean execute(String name, String[] args) {
-		System.out.println("Process ID " + processID + " is executing " + name);
+		//System.out.println("Process ID " + processID + " is executing " + name);
 		if (!load(name, args))
 			return false;
 
@@ -367,24 +366,31 @@ public class UserProcess {
 	 * @return exit() never returns.
 	 */
 	private int handleExit(int status) {
+		// Close all open file descriptors belonging to the process.
 		for (int i = 0; i < 16; i++) {
 			if (myFileSlots[i] != null) {
 				myFileSlots[i].close();
 				myFileSlots[i] = null;
-			}
-		}
+			}  // If there was an open file in that loc, close/null FD.
+		}  // All open file descriptors belonging to the process are now closed.
 		
+		// Children of this process no longer have a parent process.
 		for (int i = 0; i < children.size(); i++) {
 			children.get(i).parent = null;
 		}
-		System.out.println("exit status " + status);
-		parent.childrenStatus.put(processID, status);
 		
+		// Status is returned to the parent process as this process's exit
+		//System.out.println("exit status " + status);
+		if (parent != null)
+			parent.childrenStatus.put(processID, status);
+		
+		// If not last exiting process.
 		if (processID != 0)
 			UThread.finish();
-		else
+		else  // We are last exiting process.
 			Kernel.kernel.terminate();
 		
+		// exit() never returns.
 		return 0;		
 	}  //handleExit()
 	
@@ -458,13 +464,13 @@ public class UserProcess {
 		}
 		if (i == children.size())
 		{
-			System.out.println(i);
+			//System.out.println(i);
 			return -1;
 		}
 		children.get(i).processThread.join();
 		
 		childExitStatus = childrenStatus.get(children.get(i).processID);
-		System.out.println("join exit status " + childExitStatus);
+		//System.out.println("join exit status " + childExitStatus);
 		
 		byte [] statusByteAry = (ByteBuffer.allocate(4).putInt(childExitStatus)).array();
 		writeVirtualMemory(exitStatusAddr, statusByteAry);	
@@ -744,12 +750,14 @@ public class UserProcess {
 	public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
 		switch (syscall) {
 		case syscallHalt:
-			// Comment in to test methods in Eclipse using halt.coff.
+			// Comment in to test Task 1 methods in Eclipse using halt.coff.
 			//handleCreate("test.txt");
 			//handleRead( handleOpen("test.txt"), 1, 100 );
 			//handleWrite( handleOpen("test2.txt"), 1, 100 );
 			
-			// Set Kernel.shellProgram = testTask1.coff to run Task 1 and 3 tests.
+			// Set Kernel.shellProgram = testTask1.coff to run Task 1 tests.
+			
+			// Comment in to test Task 3 methods in Eclipse using halt.coff.
 //			String name = "hi\0";
 //			byte [] fileName1 = name.getBytes();
 //			writeVirtualMemory(100, fileName1);
