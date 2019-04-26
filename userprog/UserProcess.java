@@ -26,10 +26,12 @@ public class UserProcess {
 	 * Allocate a new process.
 	 */
 	public UserProcess() {
-		int numPhysPages = Machine.processor().getNumPhysPages();
-		pageTable = new TranslationEntry[numPhysPages];
-		for (int i = 0; i < numPhysPages; i++)
-			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+		// Project 2 Task 2: comment out and place in loadSection
+//		int numPhysPages = Machine.processor().getNumPhysPages();
+
+//		pageTable = new TranslationEntry[numPhysPages];
+//		for (int i = 0; i < numPhysPages; i++)
+//			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
 		
 		// Project 2 Task 1: Initialize OpenFiles array
 		myFileSlots = new OpenFile[16];
@@ -297,6 +299,16 @@ public class UserProcess {
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
 		}
+		
+		if (numPages > UserKernel.availPPN.size()) {
+			coff.close();
+			Lib.debug(dbgProcess, "\tinsufficient physical memory");
+			return false;
+		}
+		
+		pageTable = new TranslationEntry[numPages];
+		for (int i = 0; i < numPages; i++)
+			pageTable[i] = new TranslationEntry(i, UserKernel.availPPN.poll(), true, false, false, false);
 
 		// load sections
 		for (int s = 0; s < coff.getNumSections(); s++) {
@@ -309,7 +321,7 @@ public class UserProcess {
 				int vpn = section.getFirstVPN() + i;
 				// need ppn at this point
 				// for now, just assume virtual addresses=physical addresses
-				section.loadPage(i, vpn);
+				section.loadPage(i, pageTable[vpn].ppn);
 			}
 		}
 
@@ -320,6 +332,8 @@ public class UserProcess {
 	 * Release any resources allocated by <tt>loadSections()</tt>.
 	 */
 	protected void unloadSections() {
+		for (int i = 0; i < numPages; i++)
+			UserKernel.availPPN.add(pageTable[i].ppn);
 	}
 
 	/**
@@ -386,7 +400,7 @@ public class UserProcess {
 		
 		// If not last exiting process.
 		if (processID != 0)
-			UThread.finish();
+			UThread.currentThread().finish();
 		else  // We are last exiting process.
 			Kernel.kernel.terminate();
 		
@@ -835,6 +849,9 @@ public class UserProcess {
 
 	// Project 2 Task 1: Array of OpenFiles for the opened files in this process
 	protected OpenFile[] myFileSlots;
+	
+	// Project 2 Task 2: available physical pages
+	//private static ArrayList<Integer> pages; = new 
 	
 	// Project 2 Task 3: processID of this process
 	protected int processID;
