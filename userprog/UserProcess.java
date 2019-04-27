@@ -313,12 +313,16 @@ public class UserProcess {
 		// load sections
 		for (int s = 0; s < coff.getNumSections(); s++) {
 			CoffSection section = coff.getSection(s);
+			Boolean isReadOnly = section.isReadOnly();
 
 			Lib.debug(dbgProcess,
 					"\tinitializing " + section.getName() + " section (" + section.getLength() + " pages)");
 
 			for (int i = 0; i < section.getLength(); i++) {
 				int vpn = section.getFirstVPN() + i;
+				if (isReadOnly)
+					pageTable[vpn].readOnly = true;
+					
 				// need ppn at this point
 				// for now, just assume virtual addresses=physical addresses
 				section.loadPage(i, pageTable[vpn].ppn);
