@@ -45,8 +45,10 @@ public class UserProcess {
 		// Project 2 Task 3: Initialize counters and children
 		children = new ArrayList<UserProcess>();
 		childrenStatus = new HashMap<Integer, Integer>();
+		lock.acquire();
 		processID = processIDCounter;
 		processIDCounter++;	
+		lock.release();
 	}
 
 	/**
@@ -519,7 +521,10 @@ public class UserProcess {
 		childExitStatus = childrenStatus.get(children.get(i).processID);
 		//System.out.println("join exit status " + childExitStatus);
 		
-		byte [] statusByteAry = (ByteBuffer.allocate(4).putInt(childExitStatus)).array();
+		
+		byte [] statusByteAry = new byte[4];
+
+		Lib.bytesFromInt(statusByteAry, 0, 4, childExitStatus);
 		writeVirtualMemory(exitStatusAddr, statusByteAry);	
 		
 		return 1;		
@@ -917,6 +922,8 @@ public class UserProcess {
 
 	private int initialPC, initialSP;
 	private int argc, argv;
+	
+	private static Lock lock = new Lock();
 
 	private static final int pageSize = Processor.pageSize;
 	private static final char dbgProcess = 'a';
