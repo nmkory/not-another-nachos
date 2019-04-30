@@ -26,10 +26,12 @@ public class UserProcess {
 	 * Allocate a new process.
 	 */
 	public UserProcess() {
-		int numPhysPages = Machine.processor().getNumPhysPages();
-		pageTable = new TranslationEntry[numPhysPages];
-		for (int i = 0; i < numPhysPages; i++)
-			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+		// Project 2 Task 2: comment out and place in loadSection
+//		int numPhysPages = Machine.processor().getNumPhysPages();
+
+//		pageTable = new TranslationEntry[numPhysPages];
+//		for (int i = 0; i < numPhysPages; i++)
+//			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
 		
 		// Project 2 Task 1: Initialize OpenFiles array
 		myFileSlots = new OpenFile[16];
@@ -43,8 +45,10 @@ public class UserProcess {
 		// Project 2 Task 3: Initialize counters and children
 		children = new ArrayList<UserProcess>();
 		childrenStatus = new HashMap<Integer, Integer>();
+		lock.acquire();
 		processID = processIDCounter;
 		processIDCounter++;	
+		lock.release();
 	}
 
 	/**
@@ -152,10 +156,29 @@ public class UserProcess {
 		if (vaddr < 0 || vaddr >= memory.length)
 			return 0;
 
+//		int amount = Math.min(length, memory.length - vaddr);
+//		System.arraycopy(memory, vaddr, data, offset, amount);
+//
+//		return amount;
+		
 		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(memory, vaddr, data, offset, amount);
+		//System.arraycopy(data, offset, memory, vaddr, amount);
+		
+		int amountCopied;
+		for (amountCopied = 0; amountCopied < amount; )
+		{
+			int vpn = Processor.pageFromAddress(vaddr);
+			int addressOffset = Processor.offsetFromAddress(vaddr);
+			int ppn = pageTable[vpn].ppn;
+			int physicalAddress = Processor.makeAddress(ppn, addressOffset);
+			int amountToCopy = Math.min(amount, pageSize - addressOffset);
+			System.arraycopy(memory, physicalAddress, data, offset + amountCopied, amountToCopy);
+			amountCopied += amountToCopy;
+			vaddr += amountToCopy;
+			amount -= amountToCopy;
+		}
 
-		return amount;
+		return amountCopied;
 	}
 
 	/**
@@ -193,9 +216,23 @@ public class UserProcess {
 			return 0;
 
 		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(data, offset, memory, vaddr, amount);
+		//System.arraycopy(data, offset, memory, vaddr, amount);
+		
+		int amountCopied;
+		for (amountCopied = 0; amountCopied < amount; )
+		{
+			int vpn = Processor.pageFromAddress(vaddr);
+			int addressOffset = Processor.offsetFromAddress(vaddr);
+			int ppn = pageTable[vpn].ppn;
+			int physicalAddress = Processor.makeAddress(ppn, addressOffset);
+			int amountToCopy = Math.min(amount, pageSize - addressOffset);
+			System.arraycopy(data, offset + amountCopied, memory, physicalAddress, amountToCopy);
+			amountCopied += amountToCopy;
+			vaddr += amountToCopy;
+			amount -= amountToCopy;
+		}
 
-		return amount;
+		return amountCopied;
 	}
 
 	/**
@@ -292,24 +329,32 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the sections were successfully loaded.
 	 */
 	protected boolean loadSections() {
-		if (numPages > Machine.processor().getNumPhysPages()) {
+		if (numPages > Machine.processor().getNumPhysPages() || numPages > UserKernel.availPPN.size()) {
 			coff.close();
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
 		}
+		
+		pageTable = new TranslationEntry[numPages];
+		for (int i = 0; i < numPages; i++)
+			pageTable[i] = new TranslationEntry(i, UserKernel.availPPN.poll(), true, false, false, false);
 
 		// load sections
 		for (int s = 0; s < coff.getNumSections(); s++) {
 			CoffSection section = coff.getSection(s);
+			Boolean isReadOnly = section.isReadOnly();
 
 			Lib.debug(dbgProcess,
 					"\tinitializing " + section.getName() + " section (" + section.getLength() + " pages)");
 
 			for (int i = 0; i < section.getLength(); i++) {
 				int vpn = section.getFirstVPN() + i;
+				if (isReadOnly)
+					pageTable[vpn].readOnly = true;
+					
 				// need ppn at this point
 				// for now, just assume virtual addresses=physical addresses
-				section.loadPage(i, vpn);
+				section.loadPage(i, pageTable[vpn].ppn);
 			}
 		}
 
@@ -320,6 +365,8 @@ public class UserProcess {
 	 * Release any resources allocated by <tt>loadSections()</tt>.
 	 */
 	protected void unloadSections() {
+		for (int i = 0; i < numPages; i++)
+			UserKernel.availPPN.add(pageTable[i].ppn);
 	}
 
 	/**
@@ -366,6 +413,8 @@ public class UserProcess {
 	 * @return exit() never returns.
 	 */
 	private int handleExit(int status) {
+		unloadSections();
+		
 		// Close all open file descriptors belonging to the process.
 		for (int i = 0; i < 16; i++) {
 			if (myFileSlots[i] != null) {
@@ -386,7 +435,7 @@ public class UserProcess {
 		
 		// If not last exiting process.
 		if (processID != 0)
-			UThread.finish();
+			UThread.currentThread().finish();
 		else  // We are last exiting process.
 			Kernel.kernel.terminate();
 		
@@ -472,7 +521,10 @@ public class UserProcess {
 		childExitStatus = childrenStatus.get(children.get(i).processID);
 		//System.out.println("join exit status " + childExitStatus);
 		
-		byte [] statusByteAry = (ByteBuffer.allocate(4).putInt(childExitStatus)).array();
+		
+		byte [] statusByteAry = new byte[4];
+
+		Lib.bytesFromInt(statusByteAry, 0, 4, childExitStatus);
 		writeVirtualMemory(exitStatusAddr, statusByteAry);	
 		
 		return 1;		
@@ -836,6 +888,9 @@ public class UserProcess {
 	// Project 2 Task 1: Array of OpenFiles for the opened files in this process
 	protected OpenFile[] myFileSlots;
 	
+	// Project 2 Task 2: available physical pages
+	//private static ArrayList<Integer> pages; = new 
+	
 	// Project 2 Task 3: processID of this process
 	protected int processID;
 	
@@ -867,6 +922,8 @@ public class UserProcess {
 
 	private int initialPC, initialSP;
 	private int argc, argv;
+	
+	private static Lock lock = new Lock();
 
 	private static final int pageSize = Processor.pageSize;
 	private static final char dbgProcess = 'a';
