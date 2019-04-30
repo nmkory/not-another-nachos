@@ -154,10 +154,29 @@ public class UserProcess {
 		if (vaddr < 0 || vaddr >= memory.length)
 			return 0;
 
+//		int amount = Math.min(length, memory.length - vaddr);
+//		System.arraycopy(memory, vaddr, data, offset, amount);
+//
+//		return amount;
+		
 		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(memory, vaddr, data, offset, amount);
+		//System.arraycopy(data, offset, memory, vaddr, amount);
+		
+		int amountCopied;
+		for (amountCopied = 0; amountCopied < amount; )
+		{
+			int vpn = Processor.pageFromAddress(vaddr);
+			int addressOffset = Processor.offsetFromAddress(vaddr);
+			int ppn = pageTable[vpn].ppn;
+			int physicalAddress = Processor.makeAddress(ppn, addressOffset);
+			int amountToCopy = Math.min(amount, pageSize - addressOffset);
+			System.arraycopy(memory, physicalAddress, data, offset + amountCopied, amountToCopy);
+			amountCopied += amountToCopy;
+			vaddr += amountToCopy;
+			amount -= amountToCopy;
+		}
 
-		return amount;
+		return amountCopied;
 	}
 
 	/**
@@ -195,9 +214,23 @@ public class UserProcess {
 			return 0;
 
 		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(data, offset, memory, vaddr, amount);
+		//System.arraycopy(data, offset, memory, vaddr, amount);
+		
+		int amountCopied;
+		for (amountCopied = 0; amountCopied < amount; )
+		{
+			int vpn = Processor.pageFromAddress(vaddr);
+			int addressOffset = Processor.offsetFromAddress(vaddr);
+			int ppn = pageTable[vpn].ppn;
+			int physicalAddress = Processor.makeAddress(ppn, addressOffset);
+			int amountToCopy = Math.min(amount, pageSize - addressOffset);
+			System.arraycopy(data, offset + amountCopied, memory, physicalAddress, amountToCopy);
+			amountCopied += amountToCopy;
+			vaddr += amountToCopy;
+			amount -= amountToCopy;
+		}
 
-		return amount;
+		return amountCopied;
 	}
 
 	/**
@@ -294,13 +327,7 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the sections were successfully loaded.
 	 */
 	protected boolean loadSections() {
-		if (numPages > Machine.processor().getNumPhysPages()) {
-			coff.close();
-			Lib.debug(dbgProcess, "\tinsufficient physical memory");
-			return false;
-		}
-		
-		if (numPages > UserKernel.availPPN.size()) {
+		if (numPages > Machine.processor().getNumPhysPages() || numPages > UserKernel.availPPN.size()) {
 			coff.close();
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
@@ -384,6 +411,8 @@ public class UserProcess {
 	 * @return exit() never returns.
 	 */
 	private int handleExit(int status) {
+		unloadSections();
+		
 		// Close all open file descriptors belonging to the process.
 		for (int i = 0; i < 16; i++) {
 			if (myFileSlots[i] != null) {
