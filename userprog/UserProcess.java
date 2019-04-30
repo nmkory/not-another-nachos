@@ -5,6 +5,9 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.io.EOFException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -23,10 +26,12 @@ public class UserProcess {
 	 * Allocate a new process.
 	 */
 	public UserProcess() {
-		int numPhysPages = Machine.processor().getNumPhysPages();
-		pageTable = new TranslationEntry[numPhysPages];
-		for (int i = 0; i < numPhysPages; i++)
-			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+		// Project 2 Task 2: comment out and place in loadSection
+//		int numPhysPages = Machine.processor().getNumPhysPages();
+
+//		pageTable = new TranslationEntry[numPhysPages];
+//		for (int i = 0; i < numPhysPages; i++)
+//			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
 		
 		// Project 2 Task 1: Initialize OpenFiles array
 		myFileSlots = new OpenFile[16];
@@ -37,6 +42,13 @@ public class UserProcess {
 		// File descriptor 1 refers to display output (UNIX stdout)
 		myFileSlots[1] = UserKernel.console.openForWriting();
 		
+		// Project 2 Task 3: Initialize counters and children
+		children = new ArrayList<UserProcess>();
+		childrenStatus = new HashMap<Integer, Integer>();
+		lock.acquire();
+		processID = processIDCounter;
+		processIDCounter++;	
+		lock.release();
 	}
 
 	/**
@@ -58,10 +70,12 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the program was successfully executed.
 	 */
 	public boolean execute(String name, String[] args) {
+		//System.out.println("Process ID " + processID + " is executing " + name);
 		if (!load(name, args))
 			return false;
 
-		new UThread(this).setName(name).fork();
+		processThread = new UThread(this);
+		processThread.setName(name).fork();
 
 		return true;
 	}
@@ -142,10 +156,29 @@ public class UserProcess {
 		if (vaddr < 0 || vaddr >= memory.length)
 			return 0;
 
+//		int amount = Math.min(length, memory.length - vaddr);
+//		System.arraycopy(memory, vaddr, data, offset, amount);
+//
+//		return amount;
+		
 		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(memory, vaddr, data, offset, amount);
+		//System.arraycopy(data, offset, memory, vaddr, amount);
+		
+		int amountCopied;
+		for (amountCopied = 0; amountCopied < amount; )
+		{
+			int vpn = Processor.pageFromAddress(vaddr);
+			int addressOffset = Processor.offsetFromAddress(vaddr);
+			int ppn = pageTable[vpn].ppn;
+			int physicalAddress = Processor.makeAddress(ppn, addressOffset);
+			int amountToCopy = Math.min(amount, pageSize - addressOffset);
+			System.arraycopy(memory, physicalAddress, data, offset + amountCopied, amountToCopy);
+			amountCopied += amountToCopy;
+			vaddr += amountToCopy;
+			amount -= amountToCopy;
+		}
 
-		return amount;
+		return amountCopied;
 	}
 
 	/**
@@ -183,9 +216,23 @@ public class UserProcess {
 			return 0;
 
 		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(data, offset, memory, vaddr, amount);
+		//System.arraycopy(data, offset, memory, vaddr, amount);
+		
+		int amountCopied;
+		for (amountCopied = 0; amountCopied < amount; )
+		{
+			int vpn = Processor.pageFromAddress(vaddr);
+			int addressOffset = Processor.offsetFromAddress(vaddr);
+			int ppn = pageTable[vpn].ppn;
+			int physicalAddress = Processor.makeAddress(ppn, addressOffset);
+			int amountToCopy = Math.min(amount, pageSize - addressOffset);
+			System.arraycopy(data, offset + amountCopied, memory, physicalAddress, amountToCopy);
+			amountCopied += amountToCopy;
+			vaddr += amountToCopy;
+			amount -= amountToCopy;
+		}
 
-		return amount;
+		return amountCopied;
 	}
 
 	/**
@@ -282,24 +329,32 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the sections were successfully loaded.
 	 */
 	protected boolean loadSections() {
-		if (numPages > Machine.processor().getNumPhysPages()) {
+		if (numPages > Machine.processor().getNumPhysPages() || numPages > UserKernel.availPPN.size()) {
 			coff.close();
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
 		}
+		
+		pageTable = new TranslationEntry[numPages];
+		for (int i = 0; i < numPages; i++)
+			pageTable[i] = new TranslationEntry(i, UserKernel.availPPN.poll(), true, false, false, false);
 
 		// load sections
 		for (int s = 0; s < coff.getNumSections(); s++) {
 			CoffSection section = coff.getSection(s);
+			Boolean isReadOnly = section.isReadOnly();
 
 			Lib.debug(dbgProcess,
 					"\tinitializing " + section.getName() + " section (" + section.getLength() + " pages)");
 
 			for (int i = 0; i < section.getLength(); i++) {
 				int vpn = section.getFirstVPN() + i;
-
+				if (isReadOnly)
+					pageTable[vpn].readOnly = true;
+					
+				// need ppn at this point
 				// for now, just assume virtual addresses=physical addresses
-				section.loadPage(i, vpn);
+				section.loadPage(i, pageTable[vpn].ppn);
 			}
 		}
 
@@ -310,6 +365,8 @@ public class UserProcess {
 	 * Release any resources allocated by <tt>loadSections()</tt>.
 	 */
 	protected void unloadSections() {
+		for (int i = 0; i < numPages; i++)
+			UserKernel.availPPN.add(pageTable[i].ppn);
 	}
 
 	/**
@@ -344,6 +401,135 @@ public class UserProcess {
 		Lib.assertNotReached("Machine.halt() did not halt machine!");
 		return 0;
 	}
+	
+	
+	/**
+	 * <tt>Project 2 Task 3</tt> Terminate the current process immediately. 
+	 * Any open file descriptors belonging to the process are closed. Any 
+	 * children of the process no longer have a parent process.
+	 *
+	 * @param status is returned to the parent process as this process's exit 
+	 * status and can be collected using the join syscall.
+	 * @return exit() never returns.
+	 */
+	private int handleExit(int status) {
+		unloadSections();
+		
+		// Close all open file descriptors belonging to the process.
+		for (int i = 0; i < 16; i++) {
+			if (myFileSlots[i] != null) {
+				myFileSlots[i].close();
+				myFileSlots[i] = null;
+			}  // If there was an open file in that loc, close/null FD.
+		}  // All open file descriptors belonging to the process are now closed.
+		
+		// Children of this process no longer have a parent process.
+		for (int i = 0; i < children.size(); i++) {
+			children.get(i).parent = null;
+		}
+		
+		// Status is returned to the parent process as this process's exit
+		//System.out.println("exit status " + status);
+		if (parent != null)
+			parent.childrenStatus.put(processID, status);
+		
+		// If not last exiting process.
+		if (processID != 0)
+			UThread.currentThread().finish();
+		else  // We are last exiting process.
+			Kernel.kernel.terminate();
+		
+		// exit() never returns.
+		return 0;		
+	}  //handleExit()
+	
+	
+	/**
+	 * <tt>Project 2 Task 3</tt> Execute the program stored in the specified 
+	 * file, with the specified arguments, in a new child process. The child 
+	 * process has a new unique process ID, and starts with stdin opened as file
+	 * descriptor 0, and stdout opened as file descriptor 1.
+	 *
+	 * @param fileName the name of the file containing the executable. Note that
+	 * this string must include the ".coff" extension.
+	 * @param numArgs the number of arguments to pass to the child process.
+	 * @param aryArgs array of pointers to null-terminated strings that 
+	 * represent the arguments to pass to the child process.
+	 * @return exec() returns the child process's process ID, which can be 
+	 * passed to join(). On error, returns -1.
+	 */
+	private int handleExec(int fileName, int numArgs, int addressOfAddresses) {
+		byte[] tempAddress = new byte[4];
+		int argAddress;
+		ByteBuffer buf;
+		String fName = readVirtualMemoryString(fileName, 256);
+		
+		String[] myArgs = new String[numArgs];
+		
+		for (int i = 0; i < numArgs; i++) {
+			readVirtualMemory(addressOfAddresses, tempAddress);
+			buf = ByteBuffer.wrap(tempAddress);
+			argAddress = buf.getInt();
+			myArgs[i] = readVirtualMemoryString(argAddress, 256);
+			addressOfAddresses += 4;
+		}
+		
+//		for (int i = 0; i < numArgs; i++) {
+//			System.out.println(myArgs[i]);
+//		}
+		
+		UserProcess process = UserProcess.newUserProcess();
+	
+		process.parent = this;
+		children.add(process);
+		childrenStatus.put(process.processID, 1);
+		
+		process.execute(fName, myArgs);
+		return process.processID;	
+	}  //handleExec()
+	
+	
+	/**
+	 * <tt>Project 2 Task 3</tt> Suspend execution of the current process until 
+	 * the child process specified by the processID argument has exited. If the 
+	 * child has already exited by the time of the call, returns immediately. 
+	 * When the current process resumes, it disowns the child process, so that 
+	 * join() cannot be used on that process again.
+	 *
+	 * @param processID is the process ID of the child process, returned by
+	 * exec().
+	 * @param exitStatusAddr points to an integer where the exit status of the child 
+	 * process will be stored.
+	 * @return If the child exited normally, returns 1. If the child exited as a
+	 * result of an unhandled exception, returns 0. If processID does not refer
+	 * to a child process of the current process, returns -1.
+	 */
+	private int handleJoin(int processID, int exitStatusAddr) {
+		int i;
+		int childExitStatus;
+		for (i = 0; i < children.size(); i++) {
+			if (children.get(i).processID == processID)
+				break;
+		}
+		if (i == children.size())
+		{
+			//System.out.println(i);
+			return -1;
+		}
+		children.get(i).processThread.join();
+		
+		childExitStatus = childrenStatus.get(children.get(i).processID);
+		//System.out.println("join exit status " + childExitStatus);
+		
+		
+		byte [] statusByteAry = new byte[4];
+
+		Lib.bytesFromInt(statusByteAry, 0, 4, childExitStatus);
+		writeVirtualMemory(exitStatusAddr, statusByteAry);	
+		
+		return 1;		
+	}  //handleJoin()
+	
 	
 	/**
 	 * <tt>Project 2 Task 1</tt> Attempt to open the named disk 
@@ -616,14 +802,44 @@ public class UserProcess {
 	public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
 		switch (syscall) {
 		case syscallHalt:
-			// Comment in to test methods in Eclipse using halt.coff.
+			// Comment in to test Task 1 methods in Eclipse using halt.coff.
 			//handleCreate("test.txt");
 			//handleRead( handleOpen("test.txt"), 1, 100 );
 			//handleWrite( handleOpen("test2.txt"), 1, 100 );
 			
 			// Set Kernel.shellProgram = testTask1.coff to run Task 1 tests.
 			
+			// Comment in to test Task 3 methods in Eclipse using halt.coff.
+//			String name = "hi\0";
+//			byte [] fileName1 = name.getBytes();
+//			writeVirtualMemory(100, fileName1);
+//			
+//			byte [] address1 = (ByteBuffer.allocate(4).putInt(100)).array();
+//			writeVirtualMemory(4, address1);
+//			
+//			name = "hello\0";
+//			byte [] fileName2 = name.getBytes();
+//			writeVirtualMemory(150, fileName2);
+//			
+//			byte [] address2 = (ByteBuffer.allocate(4).putInt(150)).array();
+//			writeVirtualMemory(8, address2);
+//			
+//			name = "world\0";
+//			byte [] fileName3 = name.getBytes();
+//			writeVirtualMemory(175, fileName3);
+//			
+//			byte [] address3 = (ByteBuffer.allocate(4).putInt(175)).array();
+//			writeVirtualMemory(12, address3);
+//			
+//			handleExec(100, 3, 4);
+			
 			return handleHalt();
+		case syscallExit:
+			return handleExit(a0);
+		case syscallExec:
+			return handleExec(a0, a1, a2);
+		case syscallJoin:
+			return handleJoin(a0, a1);
 		case syscallCreate:
 			return handleCreate(a0);
 		case syscallOpen:
@@ -672,6 +888,27 @@ public class UserProcess {
 	// Project 2 Task 1: Array of OpenFiles for the opened files in this process
 	protected OpenFile[] myFileSlots;
 	
+	// Project 2 Task 2: available physical pages
+	//private static ArrayList<Integer> pages; = new 
+	
+	// Project 2 Task 3: processID of this process
+	protected int processID;
+	
+	// Project 2 Task 3: counter of processIDs
+	private static int processIDCounter = 0;
+	
+	// Project 2 Task 3: parent of this process
+	protected UserProcess parent;
+	
+	// Project 2 Task 3: children of this process
+	protected ArrayList<UserProcess> children;
+	
+	// Project 2 Task 3: children statuses of this process
+	protected HashMap<Integer, Integer> childrenStatus;
+	
+	// Project 2 Task 3: process thread
+	protected UThread processThread;
+	
 	/** The program being run by this process. */
 	protected Coff coff;
 
@@ -685,6 +922,8 @@ public class UserProcess {
 
 	private int initialPC, initialSP;
 	private int argc, argv;
+	
+	private static Lock lock = new Lock();
 
 	private static final int pageSize = Processor.pageSize;
 	private static final char dbgProcess = 'a';

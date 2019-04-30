@@ -1,5 +1,7 @@
 package nachos.userprog;
 
+import java.util.LinkedList;
+
 import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
@@ -23,6 +25,13 @@ public class UserKernel extends ThreadedKernel {
 		super.initialize(args);
 
 		console = new SynchConsole(Machine.console());
+		
+		availPPN = new LinkedList<Integer>();
+		
+		int numPhysPages = Machine.processor().getNumPhysPages();
+
+		for (int i = 0; i < numPhysPages; i++)
+			availPPN.add(i);
 
 		Machine.processor().setExceptionHandler(new Runnable() {
 			public void run() {
@@ -106,7 +115,10 @@ public class UserKernel extends ThreadedKernel {
 	public void terminate() {
 		super.terminate();
 	}
-
+	
+	// Project 2 Task 2: 
+	public static LinkedList<Integer> availPPN;
+	
 	/** Globally accessible reference to the synchronized console. */
 	public static SynchConsole console;
 
