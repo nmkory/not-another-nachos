@@ -331,6 +331,9 @@ public class UserProcess {
 
 		// and finally reserve 1 page for arguments
 		numPages++;
+		
+		// Project 2 Task 2: Initialize last vaddr
+		lastVAddr = Machine.processor().makeAddress(numPages - 1, pageSize - 1);
 
 		if (!loadSections())
 			return false;
@@ -725,8 +728,11 @@ public class UserProcess {
 	private int handleWrite(int slotNum, int vaddr, int numBytes) {
 		// Validation checks to make sure parameters are valid.
 		if (myFileSlots[slotNum] == null || slotNum < 0 || slotNum >= 16
-			|| vaddr < 0 || numBytes <= 0)
+			|| vaddr < 0 || vaddr > lastVAddr || numBytes < 0)
 			return -1;
+		
+		if (numBytes == 0)
+			return 0;
 
 		// Initialize byte[] for writing in data.
 		byte[] dataToBeFilled = new byte[numBytes];
@@ -945,8 +951,8 @@ public class UserProcess {
 	// Project 2 Task 1: Array of OpenFiles for the opened files in this process
 	protected OpenFile[] myFileSlots;
 	
-	// Project 2 Task 2: available physical pages
-	//private static ArrayList<Integer> pages; = new 
+	// Project 2 Task 2: last vaddr
+	protected int lastVAddr;
 	
 	// Project 2 Task 3: processID of this process
 	protected int processID;
