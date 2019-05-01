@@ -573,7 +573,11 @@ public class UserProcess {
 		Lib.bytesFromInt(statusByteAry, 0, 4, childExitStatus);
 		writeVirtualMemory(exitStatusAddr, statusByteAry);	
 		
-		return 1;		
+		// If child experience an unhandled exception.
+		if (childExitStatus >= 1 && childExitStatus <= 7)
+			return 0;
+		else  // Else child has a different exit status.
+			return 1;		
 	}  //handleJoin()
 	
 	
