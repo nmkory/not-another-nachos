@@ -5,7 +5,6 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.io.EOFException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -26,12 +25,13 @@ public class UserProcess {
 	 * Allocate a new process.
 	 */
 	public UserProcess() {
+		// Passing all 24 test cases.
 		// Project 2 Task 2: comment out and place in loadSection
-//		int numPhysPages = Machine.processor().getNumPhysPages();
+		//int numPhysPages = Machine.processor().getNumPhysPages();
 
-//		pageTable = new TranslationEntry[numPhysPages];
-//		for (int i = 0; i < numPhysPages; i++)
-//			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+		//pageTable = new TranslationEntry[numPhysPages];
+		//for (int i = 0; i < numPhysPages; i++)
+		//	pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
 		
 		// Project 2 Task 1: Initialize OpenFiles array
 		myFileSlots = new OpenFile[16];
@@ -152,34 +152,47 @@ public class UserProcess {
 
 		byte[] memory = Machine.processor().getMemory();
 
-		// for now, just assume that virtual addresses equal physical addresses
-		if (vaddr < 0 || vaddr >= memory.length)
+		if (vaddr < 0 || vaddr > lastVAddr)
 			return 0;
-
-//		int amount = Math.min(length, memory.length - vaddr);
-//		System.arraycopy(memory, vaddr, data, offset, amount);
-//
-//		return amount;
 		
-		int amount = Math.min(length, memory.length - vaddr);
-		//System.arraycopy(data, offset, memory, vaddr, amount);
+		// Amount to transfer is length of data or remaining amount of vmemory.
+		int amount = Math.min(length, lastVAddr - vaddr + 1);
+		final int finalAmount = amount;
 		
-		int amountCopied;
-		for (amountCopied = 0; amountCopied < amount; )
+		// totalAmountCopied is our return value.
+		int totalAmountCopied;
+		for (totalAmountCopied = 0; totalAmountCopied < finalAmount; )
 		{
+			// Get virtual page number.
 			int vpn = Processor.pageFromAddress(vaddr);
+			
+			// Get offset of the address.
 			int addressOffset = Processor.offsetFromAddress(vaddr);
+			
+			// Get physical page number using the virtual page number.
 			int ppn = pageTable[vpn].ppn;
+			
+			// Make the physical address using the physical page num and offset.
 			int physicalAddress = Processor.makeAddress(ppn, addressOffset);
-			int amountToCopy = Math.min(amount, pageSize - addressOffset);
-			System.arraycopy(memory, physicalAddress, data, offset + amountCopied, amountToCopy);
-			amountCopied += amountToCopy;
-			vaddr += amountToCopy;
-			amount -= amountToCopy;
-		}
+			
+			// Set amountToCopyInThisIteration based on the amount left or page minus offset.
+			int amountToCopyInThisIteration = Math.min(amount, pageSize - addressOffset);
+			
+			// Copy that chunk of memory into the byte array.
+			System.arraycopy(memory, physicalAddress, data, offset + totalAmountCopied, amountToCopyInThisIteration);
+			
+			// Increment total amount copied by the amount we just copied.
+			totalAmountCopied += amountToCopyInThisIteration;
+			
+			// Increment the virtual address by the amount we just copied.
+			vaddr += amountToCopyInThisIteration;
+			
+			// Decrement amount by the amount we just copied.
+			amount -= amountToCopyInThisIteration;
+		}  // After for loop, we have copied as much as we can.
 
-		return amountCopied;
-	}
+		return totalAmountCopied;
+	}  //readVirtualMemory()
 
 	/**
 	 * Transfer all data from the specified array to this process's virtual memory.
@@ -212,28 +225,51 @@ public class UserProcess {
 		byte[] memory = Machine.processor().getMemory();
 
 		// for now, just assume that virtual addresses equal physical addresses
-		if (vaddr < 0 || vaddr >= memory.length)
+		if (vaddr < 0 || vaddr > lastVAddr)
 			return 0;
 
-		int amount = Math.min(length, memory.length - vaddr);
-		//System.arraycopy(data, offset, memory, vaddr, amount);
+		// Amount to transfer is length of data or remaining amount of vmemory.
+		int amount = Math.min(length, lastVAddr - vaddr + 1);
+		final int finalAmount = amount;
 		
-		int amountCopied;
-		for (amountCopied = 0; amountCopied < amount; )
+		// totalAmountCopied is our return value.
+		int totalAmountCopied;
+		for (totalAmountCopied = 0; totalAmountCopied < finalAmount; )
 		{
+			// Get virtual page number.
 			int vpn = Processor.pageFromAddress(vaddr);
+			
+			// Check if page is marked as readOnly.
+			if (pageTable[vpn].readOnly == true)
+				return totalAmountCopied;
+			
+			// Get offset of the address.
 			int addressOffset = Processor.offsetFromAddress(vaddr);
+			
+			// Get physical page number using the virtual page number.
 			int ppn = pageTable[vpn].ppn;
+			
+			// Make the physical address using the physical page num and offset.
 			int physicalAddress = Processor.makeAddress(ppn, addressOffset);
-			int amountToCopy = Math.min(amount, pageSize - addressOffset);
-			System.arraycopy(data, offset + amountCopied, memory, physicalAddress, amountToCopy);
-			amountCopied += amountToCopy;
-			vaddr += amountToCopy;
-			amount -= amountToCopy;
-		}
+			
+			// Set amountToCopyInThisIteration based on the amount left or page minus offset.
+			int amountToCopyInThisIteration = Math.min(amount, pageSize - addressOffset);
+			
+			// Copy that chunk of memory into the byte array.
+			System.arraycopy(data, offset + totalAmountCopied, memory, physicalAddress, amountToCopyInThisIteration);
+			
+			// Increment total amount copied by the amount we just copied.
+			totalAmountCopied += amountToCopyInThisIteration;
+			
+			// Increment the virtual address by the amount we just copied.
+			vaddr += amountToCopyInThisIteration;
+			
+			// Decrement amount by the amount we just copied.
+			amount -= amountToCopyInThisIteration;
+		}  // After for loop, we have copied as much as we can.
 
-		return amountCopied;
-	}
+		return totalAmountCopied;
+	}  //writeVirtualMemory()
 
 	/**
 	 * Load the executable with the specified name into this process, and prepare to
@@ -297,6 +333,9 @@ public class UserProcess {
 
 		// and finally reserve 1 page for arguments
 		numPages++;
+		
+		// Project 2 Task 2: Initialize last vaddr
+		lastVAddr = Machine.processor().makeAddress(numPages - 1, pageSize - 1);
 
 		if (!loadSections())
 			return false;
@@ -329,19 +368,27 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the sections were successfully loaded.
 	 */
 	protected boolean loadSections() {
+		// If the number of pages for this process is greater than number of
+		// physical pages or if number of pages for this process is greater than
+		// the number of physical page numbers.
 		if (numPages > Machine.processor().getNumPhysPages() || numPages > UserKernel.availPPN.size()) {
 			coff.close();
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
-		}
+		}  // Else we have enough room to load these sections.
 		
+		// Create the pageTable for this process.
 		pageTable = new TranslationEntry[numPages];
+		
+		// For each page, give it a physical page number location.
 		for (int i = 0; i < numPages; i++)
 			pageTable[i] = new TranslationEntry(i, UserKernel.availPPN.poll(), true, false, false, false);
 
-		// load sections
+		// Load sections.
 		for (int s = 0; s < coff.getNumSections(); s++) {
 			CoffSection section = coff.getSection(s);
+			
+			// Read in bool to see if this section is read only.
 			Boolean isReadOnly = section.isReadOnly();
 
 			Lib.debug(dbgProcess,
@@ -461,15 +508,19 @@ public class UserProcess {
 	private int handleExec(int fileName, int numArgs, int addressOfAddresses) {
 		byte[] tempAddress = new byte[4];
 		int argAddress;
-		ByteBuffer buf;
+		//ByteBuffer buf;
 		String fName = readVirtualMemoryString(fileName, 256);
+		
+		if (fName == null || !(fName.endsWith(".coff")))
+			return -1;
 		
 		String[] myArgs = new String[numArgs];
 		
 		for (int i = 0; i < numArgs; i++) {
 			readVirtualMemory(addressOfAddresses, tempAddress);
-			buf = ByteBuffer.wrap(tempAddress);
-			argAddress = buf.getInt();
+			argAddress = Lib.bytesToInt(tempAddress, 0);
+			//buf = ByteBuffer.wrap(tempAddress);
+			//argAddress = buf.getInt();
 			myArgs[i] = readVirtualMemoryString(argAddress, 256);
 			addressOfAddresses += 4;
 		}
@@ -527,7 +578,11 @@ public class UserProcess {
 		Lib.bytesFromInt(statusByteAry, 0, 4, childExitStatus);
 		writeVirtualMemory(exitStatusAddr, statusByteAry);	
 		
-		return 1;		
+		// If child experience an unhandled exception.
+		if (childExitStatus >= 1 && childExitStatus <= 7)
+			return 0;
+		else  // Else child has a different exit status.
+			return 1;		
 	}  //handleJoin()
 	
 	
@@ -548,6 +603,9 @@ public class UserProcess {
 		// Comment out to test using Eclipse, use a string fName
 		// Use the parameter to pull the name of file to create from vMemory
 		String fName = readVirtualMemoryString(myAddr, 256);
+		
+		if (fName == null)
+			return -1;
 		
 		// Attempt to open the file to be created to see if it already exists.
 		OpenFile tempFile = ThreadedKernel.fileSystem.open(fName, false);
@@ -593,6 +651,9 @@ public class UserProcess {
 		// Use the parameter to pull the name of file to open from vMemory
 		String fName = readVirtualMemoryString(myAddr, 256);
 		
+		if (fName == null)
+			return -1;
+		
 		// Attempt to open the file if it already exists.
 		OpenFile tempFile = ThreadedKernel.fileSystem.open(fName, false);
 		
@@ -634,7 +695,7 @@ public class UserProcess {
 	private int handleRead(int slotNum, int vaddr, int numBytes) {
 		// Validation checks to make sure parameters are valid.
 		if (myFileSlots[slotNum] == null || slotNum < 0 || slotNum >= 16
-			|| vaddr <= 0 || numBytes <= 0)
+			|| vaddr < 0 || numBytes <= 0)
 			return -1;
 		
 		// Initialize byte[] for reading in data.
@@ -669,8 +730,11 @@ public class UserProcess {
 	private int handleWrite(int slotNum, int vaddr, int numBytes) {
 		// Validation checks to make sure parameters are valid.
 		if (myFileSlots[slotNum] == null || slotNum < 0 || slotNum >= 16
-			|| vaddr <= 0 || numBytes <= 0)
+			|| vaddr < 0 || vaddr > lastVAddr || numBytes < 0)
 			return -1;
+		
+		if (numBytes == 0)
+			return 0;
 
 		// Initialize byte[] for writing in data.
 		byte[] dataToBeFilled = new byte[numBytes];
@@ -880,6 +944,7 @@ public class UserProcess {
 			break;
 
 		default:
+			handleExit(cause);
 			Lib.debug(dbgProcess, "Unexpected exception: " + Processor.exceptionNames[cause]);
 			Lib.assertNotReached("Unexpected exception");
 		}
@@ -888,8 +953,8 @@ public class UserProcess {
 	// Project 2 Task 1: Array of OpenFiles for the opened files in this process
 	protected OpenFile[] myFileSlots;
 	
-	// Project 2 Task 2: available physical pages
-	//private static ArrayList<Integer> pages; = new 
+	// Project 2 Task 2: last vaddr
+	protected int lastVAddr;
 	
 	// Project 2 Task 3: processID of this process
 	protected int processID;
@@ -923,6 +988,7 @@ public class UserProcess {
 	private int initialPC, initialSP;
 	private int argc, argv;
 	
+	// Project 2 Task 2: lock to make process IDs atomic
 	private static Lock lock = new Lock();
 
 	private static final int pageSize = Processor.pageSize;
