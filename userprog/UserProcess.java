@@ -25,6 +25,7 @@ public class UserProcess {
 	 * Allocate a new process.
 	 */
 	public UserProcess() {
+		// Passing all 24 test cases.
 		// Project 2 Task 2: comment out and place in loadSection
 		//int numPhysPages = Machine.processor().getNumPhysPages();
 
