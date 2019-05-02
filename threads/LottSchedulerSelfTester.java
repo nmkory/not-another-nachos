@@ -14,16 +14,16 @@ public class LottSchedulerSelfTester {
 	 * The 5 Ticket Thread should be picked 25% of the time.
 	 */
 	public static void selfTest1() {
-		System.out.println("Queue Contents: 15 Tix Thread, 5 Tix Thread");
+		System.out.println("Basic Lottery Testing 1: 15 Tix Thread vs. 5 Tix Thread");
 		
 		// A thread that will "acquire" the LotteryQueue
-		theThreadThatDoesStuff = new KThread(immediatelyDoStuff);
+		theThreadThatDoesStuff = new KThread(null);
 		
-		KThread Tix5Thread = new KThread(immediatelyDoStuff);
+		KThread Tix5Thread = new KThread(null);
 		Tix5Thread.setName("5 Ticket Thread");
 		changePriorityOfThread(Tix5Thread, 5);
 		
-		KThread Tix15Thread = new KThread(immediatelyDoStuff);
+		KThread Tix15Thread = new KThread(null);
 		Tix15Thread.setName("15 Ticket Thread");
 		changePriorityOfThread(Tix15Thread, 15);
 		
@@ -81,20 +81,20 @@ public class LottSchedulerSelfTester {
 	 *   20-Tix Won: 5-Tix should be picked 25% of the time while 15-Tix should be picked 75% of the time.
 	 */
 	public static void selfTest2() {
-		System.out.println("Queue Contents: 15 Tix Thread, 5 Tix Thread, 20 Tix Thread");
+		System.out.println("Basic Lottery Testing 2: 15 Tix Thread vs. 5 Tix Thread vs. 20 Tix Thread");
 		
 		// A thread that will "acquire" the LotteryQueue
-		theThreadThatDoesStuff = new KThread(immediatelyDoStuff);
+		theThreadThatDoesStuff = new KThread(null);
 		
-		KThread Tix5Thread = new KThread(immediatelyDoStuff);
+		KThread Tix5Thread = new KThread(null);
 		Tix5Thread.setName("5 Ticket Thread");
 		changePriorityOfThread(Tix5Thread, 5);
 		
-		KThread Tix15Thread = new KThread(immediatelyDoStuff);
+		KThread Tix15Thread = new KThread(null);
 		Tix15Thread.setName("15 Ticket Thread");
 		changePriorityOfThread(Tix15Thread, 15);
 		
-		KThread Tix20Thread = new KThread(immediatelyDoStuff);
+		KThread Tix20Thread = new KThread(null);
 		Tix20Thread.setName("20 Ticket Thread");
 		changePriorityOfThread(Tix20Thread, 20);
 		
@@ -212,6 +212,151 @@ public class LottSchedulerSelfTester {
 		System.out.println("");
 	}
 
+	/* Ticket Donation Testing */
+	
+	/**
+	 * A 5 Ticket Thread acquires a resource while a 10 Ticket and a 15 Ticket Thread wait for access in that order.
+	 * When the 10-Tix Thread waits for access, the 5-Tix thread should return an effective priority of 15
+	 * When the 15-Tix Thread waits for access, the 5-Tix thread should return an effective priority of 30
+	 */
+	public static void selfTest3() {
+		System.out.println("Ticket Donation Testing 1: 1 Resource, Many Threads");
+		
+		KThread Tix5Thread = new KThread(null);
+		Tix5Thread.setName("5 Ticket Thread");
+		changePriorityOfThread(Tix5Thread, 5);
+		
+		KThread Tix10Thread = new KThread(null);
+		Tix10Thread.setName("10 Ticket Thread");
+		changePriorityOfThread(Tix10Thread, 10);
+		
+		KThread Tix15Thread = new KThread(null);
+		Tix15Thread.setName("15 Ticket Thread");
+		changePriorityOfThread(Tix15Thread, 15);
+		
+		// Disable interrupts
+		boolean intStatus = Machine.interrupt().disable();
+		
+		donationQueue.acquire(Tix5Thread);
+		System.out.println(Tix5Thread.getName() + " starts with an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix5Thread));
+		donationQueue.waitForAccess(Tix10Thread);
+		System.out.println(Tix10Thread.getName() + " is now waiting for access. " + Tix5Thread.getName() + " now has an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix5Thread));
+		donationQueue.waitForAccess(Tix15Thread);
+		System.out.println(Tix15Thread.getName() + " is now waiting for access. " + Tix5Thread.getName() + " now has an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix5Thread));
+		System.out.println("");
+		
+		// Restore interrupts
+		Machine.interrupt().restore(intStatus);
+		
+	}
+	
+	/**
+	 * A 5 Ticket Thread acquires Resource A. A 15 Ticket Thread acquires Resource B.
+	 * The 15 Ticket Thread waits for access on Resource A thus giving the 5-Tix thread an effective priority of 20
+	 * A 10 Ticket Thread waits for access on Resource B. This should give the 15-Tix thread an effective priority of 25
+	 * This should also recursively give the 5-Tix Thread an effective priority of 30
+	 */
+	public static void selfTest3_Part2() {
+		System.out.println("Ticket Donation Testing 2: Chain of resources");
+		
+		KThread Tix5Thread = new KThread(null);
+		Tix5Thread.setName("5 Ticket Thread");
+		changePriorityOfThread(Tix5Thread, 5);
+		
+		KThread Tix10Thread = new KThread(null);
+		Tix10Thread.setName("10 Ticket Thread");
+		changePriorityOfThread(Tix10Thread, 10);
+		
+		KThread Tix15Thread = new KThread(null);
+		Tix15Thread.setName("15 Ticket Thread");
+		changePriorityOfThread(Tix15Thread, 15);
+		
+		// Disable interrupts
+		boolean intStatus = Machine.interrupt().disable();
+		
+		donationQueue.acquire(Tix5Thread);
+		System.out.println("Resource A has been acquired by " + Tix5Thread.getName() + ". They start with an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix5Thread));
+		donationQueue2.acquire(Tix15Thread);
+		System.out.println("Resource B has been acquired by " + Tix15Thread.getName() + ". They start with an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix15Thread));
+		donationQueue.waitForAccess(Tix15Thread);
+		System.out.println(Tix15Thread.getName() + " is now waiting for access on Resource A. " + Tix5Thread.getName() + " now has an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix5Thread));
+		donationQueue2.waitForAccess(Tix10Thread);
+		System.out.println(Tix10Thread.getName() + " is now waiting for access on Resource B. " + Tix15Thread.getName() + " now has an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix15Thread));
+		System.out.println("By extension, " + Tix5Thread.getName() + " now has an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix5Thread));
+		System.out.println("");
+		
+		// Restore interrupts
+		Machine.interrupt().restore(intStatus);
+		
+	}
+	
+	/*
+	 * A 5 Ticket Thread acquires a resource, then a 10 Ticket Thread waits for access
+	 * The 5 Ticket Thread is then put into a LotteryQueue with a 15 Ticket Thread
+	 * Both the 5 Ticket Thread and the 15 Ticket Thread should be picked 50% of the time
+	 */
+	public static void selfTest4() {
+		System.out.println("Ticket Donation Testing 3: 5+10 Tix Thread vs 15 Tix Thread");
+		
+		theThreadThatDoesStuff = new KThread(null);
+		
+		KThread Tix5Thread = new KThread(null);
+		Tix5Thread.setName("5 Ticket Thread");
+		changePriorityOfThread(Tix5Thread, 5);
+		
+		KThread Tix10Thread = new KThread(null);
+		Tix10Thread.setName("10 Ticket Thread");
+		changePriorityOfThread(Tix10Thread, 10);
+		
+		KThread Tix15Thread = new KThread(null);
+		Tix15Thread.setName("15 Ticket Thread");
+		changePriorityOfThread(Tix15Thread, 15);
+
+		// Disable interrupts
+		boolean intStatus = Machine.interrupt().disable();
+		
+		donationQueue.acquire(Tix5Thread);
+		donationQueue.waitForAccess(Tix10Thread);
+		
+		// Keep track of the times each thread was picked
+		int Tix5Picked = 0, Tix15Picked = 0;
+
+		for (int i = 0; i < numIterations; i++) {
+			// Have theThreadThatDoesStuff acquire the LotteryQueue
+			testQueue.acquire(theThreadThatDoesStuff);
+
+			// Shove the other threads into the LotteryQueue
+			testQueue.waitForAccess(Tix15Thread);
+			testQueue.waitForAccess(Tix5Thread);
+
+			// Due to the ticket donation, there should be 30 tickets in the lottery
+			Lib.assertTrue(testQueue.totalTickets == 30);
+
+			// Pick a thread using the Lottery
+			KThread winningThread = testQueue.nextThread();
+
+			// Increment the counter for the winning thread
+			if (winningThread.compareTo(Tix15Thread) == 0) {
+				Tix15Picked++;
+			}
+			else if (winningThread.compareTo(Tix5Thread) == 0) {
+				Tix5Picked++;
+			}
+
+			// Flush out the remaining threads in the Lottery
+			while (testQueue.nextThread() != null) {
+			}
+		}
+
+		// Restore interrupts
+		Machine.interrupt().restore(intStatus);
+
+		System.out.println("Final Results");
+		System.out.println("5 Ticket Thread was picked " + Tix5Picked + "/" + numIterations + " times! (" + (float)(Tix5Picked) / numIterations * 100 + "%)");
+		System.out.println("15 Ticket Thread was picked " + Tix15Picked + "/" + numIterations + " times! (" + (float)(Tix15Picked) / numIterations * 100 + "%)");
+		System.out.println("");
+	}
+	
 	/**
 	 * A function that makes a thread do some stuff This is literally just a ping
 	 * test
@@ -276,7 +421,7 @@ public class LottSchedulerSelfTester {
 	private static final char dbgThread = 't';
 	private static final int numIterations = 1000000;
 	private static KThread theThreadThatDoesStuff = null;
-	private static LotteryQueue testQueue = (LotteryQueue) ThreadedKernel.scheduler.newThreadQueue(true);
-	private static Lock someResource = new Lock();
-
+	private static LotteryQueue testQueue = (LotteryQueue) ThreadedKernel.scheduler.newThreadQueue(false);
+	private static LotteryQueue donationQueue = (LotteryQueue) ThreadedKernel.scheduler.newThreadQueue(true);
+	private static LotteryQueue donationQueue2 = (LotteryQueue) ThreadedKernel.scheduler.newThreadQueue(true);
 }

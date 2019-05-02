@@ -68,6 +68,7 @@ public class LotteryScheduler extends PriorityScheduler {
     		super(transferPriority);
     		this.totalTickets = 0;
     		this.rng = new Random();
+    		this.owner = null;
     	}
     	
     	@Override
@@ -114,50 +115,84 @@ public class LotteryScheduler extends PriorityScheduler {
 			getThreadState(thread).waitForAccess(this);  // Invokes the waitForAcess() from LotteryThreadState rather than from ThreadState
     	}
     	
+    	@Override
+    	public void acquire(KThread thread) {
+    		Lib.assertTrue(Machine.interrupt().disabled());
+    		getThreadState(thread).acquire(this);  // Invokes acquire() from LotteryThreadState rather than from ThreadState
+    	}
+    	
     	long totalTickets;
     	Random rng;
+    	LotteryThreadState owner;
     }
     
     protected class LotteryThreadState extends ThreadState {
     	public LotteryThreadState(KThread thread) {
     		super(thread);
-    		this.queuesWaitingIn = new LinkedList<LotteryQueue>();
+    		this.lotteryQueuesWaitingIn = new LinkedList<LotteryQueue>();
     	}
     	
     	@Override
     	public void updateEffectivePriority(int donatedTickets) {
-    		for (int i = 0; i < queuesWaitingIn.size(); i++) {
+    		for (int i = 0; i < lotteryQueuesWaitingIn.size(); i++) {
 				// remove ourselves from their queue
-				queuesWaitingIn.get(i).treeSetQueue.remove(this);
+				lotteryQueuesWaitingIn.get(i).treeSetQueue.remove(this);
 			} // after for loop we've removed ourselves from all waitQueues
     		
     		// increment our effective priority by the number of donatedTickets
     		this.effectivePriority += donatedTickets;
     		
     		// for each resource we are waiting on
-			for (int i = 0; i < queuesWaitingIn.size(); i++) {
+			for (int i = 0; i < lotteryQueuesWaitingIn.size(); i++) {
 				// readd ourselves to their queue with new priority
-				queuesWaitingIn.get(i).treeSetQueue.add(this);
+				lotteryQueuesWaitingIn.get(i).treeSetQueue.add(this);
 				
 				// increment the totalTickets of the queue
-				queuesWaitingIn.get(i).totalTickets += donatedTickets;
+				lotteryQueuesWaitingIn.get(i).totalTickets += donatedTickets;
 
 				// if transferPriority on and the resource has a holder
-				if (queuesWaitingIn.get(i).transferPriority && queuesWaitingIn.get(i).owner != null) {
+				if (lotteryQueuesWaitingIn.get(i).transferPriority && lotteryQueuesWaitingIn.get(i).owner != null) {
 
 					// see if owner needs to update its priority
-					queuesWaitingIn.get(i).owner.updateEffectivePriority(donatedTickets);
+					lotteryQueuesWaitingIn.get(i).owner.updateEffectivePriority(donatedTickets);
 				} // after if, owner has done its own recursive calls
 
 			} // after for loop, we've updated in all queues
     	}
         
         public void waitForAccess(LotteryQueue waitQueue) {
-        	waitForAccess((PriorityQueue)(waitQueue));
-        	waitQueue.totalTickets += this.getEffectivePriority();
+        	// Mark the thread with the current machine time so
+        	// we know how long they have been waiting
+        	this.markTimestamp();
+
+        	// if this is a queue with transfer priority and if there is an owner
+        	if (waitQueue.transferPriority && waitQueue.owner != null) {
+        		// donate priority
+        		waitQueue.owner.updateEffectivePriority(this.effectivePriority);
+        	} // after if statement, all recursive calls complete
+
+        	// add to this to the list of queues we are waiting in
+        	lotteryQueuesWaitingIn.add(waitQueue);
+        	
+        	// Increment the total number of tickets in the lottery
+        	waitQueue.totalTickets += this.effectivePriority;
+
+        	// Add the thread to the TreeSet wait queue
+        	Lib.debug(dbgThread, "Before Adding: ");
+        	waitQueue.print();
+
+        	waitQueue.treeSetQueue.add(this);
+
+        	Lib.debug(dbgThread, "After Adding: ");
+        	waitQueue.print(); // Print the result of pushing into the queue
+        }
+        
+        public void acquire(LotteryQueue waitQueue) {
+        	waitQueue.owner = this;
+        	lotteryQueuesWaitingIn.remove(waitQueue);  // Remove the lottery queue from the list of queues the thread is waiting in
         }
     	
-    	protected LinkedList<LotteryQueue> queuesWaitingIn;
+    	protected LinkedList<LotteryQueue> lotteryQueuesWaitingIn;
     }
     
     private static final char dbgThread = 't';
