@@ -151,15 +151,16 @@ public class UserProcess {
 
 		byte[] memory = Machine.processor().getMemory();
 
-		if (vaddr < 0 || vaddr >= memory.length)
+		if (vaddr < 0 || vaddr > lastVAddr)
 			return 0;
 		
 		// Amount to transfer is length of data or remaining amount of vmemory.
-		int amount = Math.min(length, memory.length - vaddr);
+		int amount = Math.min(length, lastVAddr - vaddr + 1);
+		final int finalAmount = amount;
 		
-		// AmountCopied is our return value.
-		int amountCopied;
-		for (amountCopied = 0; amountCopied < amount; )
+		// totalAmountCopied is our return value.
+		int totalAmountCopied;
+		for (totalAmountCopied = 0; totalAmountCopied < finalAmount; )
 		{
 			// Get virtual page number.
 			int vpn = Processor.pageFromAddress(vaddr);
@@ -173,23 +174,23 @@ public class UserProcess {
 			// Make the physical address using the physical page num and offset.
 			int physicalAddress = Processor.makeAddress(ppn, addressOffset);
 			
-			// Set amountToCopy based on the amount left or page minus offset.
-			int amountToCopy = Math.min(amount, pageSize - addressOffset);
+			// Set amountToCopyInThisIteration based on the amount left or page minus offset.
+			int amountToCopyInThisIteration = Math.min(amount, pageSize - addressOffset);
 			
 			// Copy that chunk of memory into the byte array.
-			System.arraycopy(memory, physicalAddress, data, offset + amountCopied, amountToCopy);
+			System.arraycopy(memory, physicalAddress, data, offset + totalAmountCopied, amountToCopyInThisIteration);
 			
 			// Increment total amount copied by the amount we just copied.
-			amountCopied += amountToCopy;
+			totalAmountCopied += amountToCopyInThisIteration;
 			
 			// Increment the virtual address by the amount we just copied.
-			vaddr += amountToCopy;
+			vaddr += amountToCopyInThisIteration;
 			
 			// Decrement amount by the amount we just copied.
-			amount -= amountToCopy;
+			amount -= amountToCopyInThisIteration;
 		}  // After for loop, we have copied as much as we can.
 
-		return amountCopied;
+		return totalAmountCopied;
 	}  //readVirtualMemory()
 
 	/**
@@ -223,22 +224,23 @@ public class UserProcess {
 		byte[] memory = Machine.processor().getMemory();
 
 		// for now, just assume that virtual addresses equal physical addresses
-		if (vaddr < 0 || vaddr >= memory.length)
+		if (vaddr < 0 || vaddr > lastVAddr)
 			return 0;
 
 		// Amount to transfer is length of data or remaining amount of vmemory.
-		int amount = Math.min(length, memory.length - vaddr);
+		int amount = Math.min(length, lastVAddr - vaddr + 1);
+		final int finalAmount = amount;
 		
-		// AmountCopied is our return value.
-		int amountCopied;
-		for (amountCopied = 0; amountCopied < amount; )
+		// totalAmountCopied is our return value.
+		int totalAmountCopied;
+		for (totalAmountCopied = 0; totalAmountCopied < finalAmount; )
 		{
 			// Get virtual page number.
 			int vpn = Processor.pageFromAddress(vaddr);
 			
 			// Check if page is marked as readOnly.
 			if (pageTable[vpn].readOnly == true)
-				return amountCopied;
+				return totalAmountCopied;
 			
 			// Get offset of the address.
 			int addressOffset = Processor.offsetFromAddress(vaddr);
@@ -249,23 +251,23 @@ public class UserProcess {
 			// Make the physical address using the physical page num and offset.
 			int physicalAddress = Processor.makeAddress(ppn, addressOffset);
 			
-			// Set amountToCopy based on the amount left or page minus offset.
-			int amountToCopy = Math.min(amount, pageSize - addressOffset);
+			// Set amountToCopyInThisIteration based on the amount left or page minus offset.
+			int amountToCopyInThisIteration = Math.min(amount, pageSize - addressOffset);
 			
 			// Copy that chunk of memory into the byte array.
-			System.arraycopy(data, offset + amountCopied, memory, physicalAddress, amountToCopy);
+			System.arraycopy(data, offset + totalAmountCopied, memory, physicalAddress, amountToCopyInThisIteration);
 			
 			// Increment total amount copied by the amount we just copied.
-			amountCopied += amountToCopy;
+			totalAmountCopied += amountToCopyInThisIteration;
 			
 			// Increment the virtual address by the amount we just copied.
-			vaddr += amountToCopy;
+			vaddr += amountToCopyInThisIteration;
 			
 			// Decrement amount by the amount we just copied.
-			amount -= amountToCopy;
+			amount -= amountToCopyInThisIteration;
 		}  // After for loop, we have copied as much as we can.
 
-		return amountCopied;
+		return totalAmountCopied;
 	}  //writeVirtualMemory()
 
 	/**
