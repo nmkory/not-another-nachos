@@ -121,7 +121,8 @@ int readAndWriteTest(int wFD, int rFD, char *buffer, int count)
 int
 main()
 {
-  char* realBuffer = "a";
+  char buffer = "a";
+  char *realBuffer = &buffer;
   printf("Testing program for Task 1.\n\n");
   int testLoc = createTest();
   int testOpen = openTest();
