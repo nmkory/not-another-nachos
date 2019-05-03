@@ -83,7 +83,7 @@ int readAndWriteTest(int wFD, int rFD, char *buffer, int count)
   if (read(rFD, buffer, count) == 11)
   {
     printf("11 bytes have been read into virtual memory.\n");
-    printf("They read->%s\n\n", 1);
+    printf("They read->%s\n\n", buffer);
   }
 
   else
@@ -121,10 +121,13 @@ int readAndWriteTest(int wFD, int rFD, char *buffer, int count)
 int
 main()
 {
+  char* realBuffer = "a";
   printf("Testing program for Task 1.\n\n");
   int testLoc = createTest();
   int testOpen = openTest();
-  readAndWriteTest(testLoc, testOpen, 1, 11);
+  readAndWriteTest(testLoc, testOpen, realBuffer, 11);
+
+  printf("address of buffer = %d, content = %s\n", realBuffer, realBuffer);
 
   printf("Testing close.\n");
   if (close(testLoc) == 0 && close(testOpen) == 0)
