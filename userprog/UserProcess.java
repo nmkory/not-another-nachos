@@ -26,6 +26,9 @@ public class UserProcess {
 	 */
 	public UserProcess() {
 		// Passing all 24 test cases.
+		// Set Kernel.shellProgram = testTask1.coff to run Task 1 tests.
+		// Set Kernel.shellProgram = testTask2and3.coff to run Task 2 and 3 tests.
+		
 		// Project 2 Task 2: comment out and place in loadSection
 		//int numPhysPages = Machine.processor().getNumPhysPages();
 
@@ -865,38 +868,7 @@ public class UserProcess {
 	 */
 	public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
 		switch (syscall) {
-		case syscallHalt:
-			// Comment in to test Task 1 methods in Eclipse using halt.coff.
-			//handleCreate("test.txt");
-			//handleRead( handleOpen("test.txt"), 1, 100 );
-			//handleWrite( handleOpen("test2.txt"), 1, 100 );
-			
-			// Set Kernel.shellProgram = testTask1.coff to run Task 1 tests.
-			
-			// Comment in to test Task 3 methods in Eclipse using halt.coff.
-//			String name = "hi\0";
-//			byte [] fileName1 = name.getBytes();
-//			writeVirtualMemory(100, fileName1);
-//			
-//			byte [] address1 = (ByteBuffer.allocate(4).putInt(100)).array();
-//			writeVirtualMemory(4, address1);
-//			
-//			name = "hello\0";
-//			byte [] fileName2 = name.getBytes();
-//			writeVirtualMemory(150, fileName2);
-//			
-//			byte [] address2 = (ByteBuffer.allocate(4).putInt(150)).array();
-//			writeVirtualMemory(8, address2);
-//			
-//			name = "world\0";
-//			byte [] fileName3 = name.getBytes();
-//			writeVirtualMemory(175, fileName3);
-//			
-//			byte [] address3 = (ByteBuffer.allocate(4).putInt(175)).array();
-//			writeVirtualMemory(12, address3);
-//			
-//			handleExec(100, 3, 4);
-			
+		case syscallHalt:			
 			return handleHalt();
 		case syscallExit:
 			return handleExit(a0);
