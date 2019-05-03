@@ -58,6 +58,8 @@ public class LottSchedulerSelfTester {
 			// Flush out the remaining threads in the Lottery
 			while (testQueue.nextThread() != null) {
 			}
+			
+			Lib.assertTrue(testQueue.totalTickets == 0);  // There should now be 0 tickets left in the lottery
 		}
 		
 		// Restore interrupts
@@ -185,6 +187,8 @@ public class LottSchedulerSelfTester {
 			// Flush out the remaining threads in the Lottery
 			while (testQueue.nextThread() != null) {
 			}
+			
+			Lib.assertTrue(testQueue.totalTickets == 0);  // There should now be 0 tickets left in the lottery
 		}
 		
 		// Restore interrupts
@@ -239,11 +243,21 @@ public class LottSchedulerSelfTester {
 		
 		donationQueue.acquire(Tix5Thread);
 		System.out.println(Tix5Thread.getName() + " starts with an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix5Thread));
+		
 		donationQueue.waitForAccess(Tix10Thread);
 		System.out.println(Tix10Thread.getName() + " is now waiting for access. " + Tix5Thread.getName() + " now has an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix5Thread));
+		
+		Lib.assertTrue(donationQueue.totalTickets == 10);  // There should now be 10 tickets in the lottery
+		
 		donationQueue.waitForAccess(Tix15Thread);
 		System.out.println(Tix15Thread.getName() + " is now waiting for access. " + Tix5Thread.getName() + " now has an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix5Thread));
+		
+		Lib.assertTrue(donationQueue.totalTickets == 25);  // There should now be 25 tickets in the lottery
+		
 		System.out.println("");
+		
+		while (donationQueue.nextThread() != null) {
+		}  // Flush out the queues from the lottery
 		
 		// Restore interrupts
 		Machine.interrupt().restore(intStatus);
@@ -278,12 +292,21 @@ public class LottSchedulerSelfTester {
 		System.out.println("Resource A has been acquired by " + Tix5Thread.getName() + ". They start with an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix5Thread));
 		donationQueue2.acquire(Tix15Thread);
 		System.out.println("Resource B has been acquired by " + Tix15Thread.getName() + ". They start with an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix15Thread));
+		
 		donationQueue.waitForAccess(Tix15Thread);
 		System.out.println(Tix15Thread.getName() + " is now waiting for access on Resource A. " + Tix5Thread.getName() + " now has an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix5Thread));
+		
+		Lib.assertTrue(donationQueue.totalTickets == 15);  // There should now be 15 tickets in Resource A's lottery
+		
 		donationQueue2.waitForAccess(Tix10Thread);
 		System.out.println(Tix10Thread.getName() + " is now waiting for access on Resource B. " + Tix15Thread.getName() + " now has an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix15Thread));
+		
+		Lib.assertTrue(donationQueue2.totalTickets == 10);  // There should now be 10 tickets in Resource B's lottery
+		
 		System.out.println("By extension, " + Tix5Thread.getName() + " now has an effective priority of " + ThreadedKernel.scheduler.getEffectivePriority(Tix5Thread));
 		System.out.println("");
+		
+		Lib.assertTrue(donationQueue.totalTickets == 25);  // The donation should have reached through to Resource A and increased the ticket count to 25
 		
 		// Restore interrupts
 		Machine.interrupt().restore(intStatus);

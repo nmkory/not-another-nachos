@@ -77,6 +77,7 @@ public class LotteryScheduler extends PriorityScheduler {
     		
     		// Check if the wait queue is empty. If so, return NULL
     		if (treeSetQueue.isEmpty()) {
+    			Lib.assertTrue(totalTickets == 0);  // If the queue is empty, there should be no tickets in the lottery
     			owner = null;
     			return null;
     		}
@@ -87,7 +88,7 @@ public class LotteryScheduler extends PriorityScheduler {
     		// Poll a random number from 1 to totalTickets inclusive
     		long winningTicket = rng.nextInt((int)(totalTickets)) + 1;  // Note: For the purposes of Project 2, it is safe to cast our totalTickets to an int
     		long runningTotal = 0;
-    		ThreadState winning_thread = null;
+    		LotteryThreadState winning_thread = null;
     		
     		// For each thread in our queue...
     		for (Iterator<ThreadState> i = treeSetQueue.iterator(); i.hasNext();) {
@@ -95,7 +96,7 @@ public class LotteryScheduler extends PriorityScheduler {
     			runningTotal += nextThread.getEffectivePriority();  // Add its effectivePriority to our running total
     			
     			if (runningTotal >= winningTicket) {  // If this thread holds the winning ticket...
-    				winning_thread = nextThread;  // Set this thread as the winner
+    				winning_thread = (LotteryThreadState)(nextThread);  // Set this thread as the winner
     				i.remove();  // Remove the thread from the queue
     				totalTickets -= winning_thread.getEffectivePriority();  // Remove the tickets from the lottery
     				break;  // Break from the for loop
@@ -112,7 +113,7 @@ public class LotteryScheduler extends PriorityScheduler {
     	@Override
     	public void waitForAccess(KThread thread) {
     		Lib.assertTrue(Machine.interrupt().disabled());
-			getThreadState(thread).waitForAccess(this);  // Invokes the waitForAcess() from LotteryThreadState rather than from ThreadState
+			getThreadState(thread).waitForAccess(this);  // Invokes the waitForAccess() from LotteryThreadState rather than from ThreadState
     	}
     	
     	@Override
